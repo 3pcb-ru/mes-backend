@@ -1,6 +1,6 @@
 # Commercial Use & Licensing
 
-Thank you for your interest in **mes-platform**.
+Thank you for your interest in **mes-backend**.
 
 This repository is published as a **source-available project** and is
 **free for non-commercial use** under the terms described in the
@@ -11,12 +11,13 @@ This repository is published as a **source-available project** and is
 ## What Counts as Commercial Use?
 
 Commercial use includes, but is not limited to:
+
 - Selling this software or any derivative work
-- Offering mes-platform as a paid product or service
-- Hosting mes-platform as a paid SaaS or managed MES
-- Including mes-platform (or parts of it) in a commercial offering
+- Offering mes-backend as a paid product or service
+- Hosting mes-backend as a paid SaaS or managed MES
+- Including mes-backend (or parts of it) in a commercial offering
 - Providing paid consulting, support, or customization where
-  mes-platform itself is the core value delivered
+  mes-backend itself is the core value delivered
 
 If your usage generates **direct or indirect revenue**, it is considered
 commercial.
@@ -26,12 +27,14 @@ commercial.
 ## Commercial Licensing Options
 
 Commercial licenses are available for organizations that wish to:
-- Use mes-platform in production for commercial purposes
+
+- Use mes-backend in production for commercial purposes
 - Offer it to customers as part of a product or service
 - Run it as a hosted or managed MES solution
 - Receive long-term support or guaranteed stability
 
 Commercial licensing may include:
+
 - Permission for commercial deployment
 - Dual-licensing rights
 - Priority support and consulting
@@ -42,7 +45,7 @@ Commercial licensing may include:
 
 ## Why a Commercial License?
 
-mes-platform is designed and maintained with a strong focus on:
+mes-backend is designed and maintained with a strong focus on:
 
 - Clean domain modeling (DDD)
 - Long-term maintainability
@@ -58,10 +61,11 @@ the project can evolve into a stable, production-ready platform.
 If you are interested in commercial usage, please contact:
 
 **Author:** Amin Abbasi  
-**Project:** mes-platform  
-**Email:** a.abbasi@dannie.cc  
+**Project:** mes-backend  
+**Email:** a.abbasi@dannie.cc
 
 Please include:
+
 - Your company name
 - Intended usage (internal, SaaS, resale, etc.)
 - Approximate scale (sites, users, machines)
@@ -73,6 +77,7 @@ You will receive guidance on available licensing options.
 ## No Obligation for Evaluation
 
 You are free to:
+
 - Evaluate the software
 - Run internal proofs of concept
 - Experiment and modify the code
