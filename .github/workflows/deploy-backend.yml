@@ -39,8 +39,12 @@ jobs:
       - name: Build backend
         run: pnpm run build
 
-      - name: Run tests
+      - name: Run unit tests
         run: pnpm test --silent
+
+      # Integration tests are skipped in CI (require Docker + significant time)
+      # Run locally with: pnpm test:integration
+      # See: test/jest-integration.config.ts
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
