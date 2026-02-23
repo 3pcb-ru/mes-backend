@@ -19,11 +19,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'pnpm'
 
       # pnpm isn't included by default; install before using it.
       - name: Install pnpm
         run: npm install -g pnpm
+
+      # cache pnpm store manually to avoid requiring pnpm during setup-node
+      - name: Cache pnpm store
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.OS }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.OS }}-pnpm-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
