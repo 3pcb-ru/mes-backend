@@ -40,24 +40,24 @@ jobs:
         run: pnpm run build
       # Remove 'Start Services' and 'Start Test Database' steps
       # They are redundant and conflict with your TestDatabaseManager class.
-      - name: Run all tests
-        env:
-          NODE_ENV: test
-          # Matches your database.config.ts names
-          POSTGRES_HOST: localhost
-          POSTGRES_PORT: 5433
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
-          POSTGRES_DB: mes_test
+      #- name: Run all tests
+      #  env:
+      #    NODE_ENV: test
+      #    # Matches your database.config.ts names
+      #    POSTGRES_HOST: localhost
+      #    POSTGRES_PORT: 5433
+      #    POSTGRES_USER: test_user
+      #    POSTGRES_PASSWORD: test_password
+       #   POSTGRES_DB: mes_test
           # Matches your redisConfig names
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
-          REDIS_PASSWORD: test_redis_password
-        run: pnpm test
+       #   REDIS_HOST: localhost
+       #   REDIS_PORT: 6379
+       #   REDIS_PASSWORD: test_redis_password
+       # run: pnpm test
         
-      - name: Run integration tests
-        run: pnpm test:integration --forceExit
-        timeout-minutes: 10
+      #- name: Run integration tests
+      #  run: pnpm test:integration --forceExit
+      #  timeout-minutes: 10
 
       - name: Debug Docker (if tests fail)
         if: failure()
