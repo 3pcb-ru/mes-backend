@@ -72,15 +72,32 @@ jobs:
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_PRIVATE_KEY }}
           port: 22
+          sync: true
+          sync_timeout: 120
+          overwrite: true
+          local: build-output/
+          remote: /tmp/deploy
+
+      - name: Extract and restart service
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.VM_IP }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          port: 22
           script: |
             set -e
             mkdir -p ~/mes-backend
-            # sync artifact contents, preserving .env where present
-            rsync -av --delete --exclude ".env" build-output/dist/ ~/mes-backend/dist/
-            rsync -av --delete --exclude ".env" build-output/assets/ ~/mes-backend/assets/
-            rsync -av --delete --exclude "node_modules" build-output/package.json ~/mes-backend/package.json
+            # copy files from temp location to deployment directory
+            cp -r /tmp/deploy/dist ~/mes-backend/ || true
+            cp -r /tmp/deploy/assets ~/mes-backend/ || true
+            cp /tmp/deploy/package.json ~/mes-backend/package.json || true
+            # clean up temp
+            rm -rf /tmp/deploy
+            # install production dependencies
             cd ~/mes-backend
             npm install --production --omit=dev
+            # restart service
             if command -v pm2 >/dev/null 2>&1; then
               pm2 restart mes-backend || pm2 start dist/main.js --name mes-backend --env production
             else
