@@ -1,4 +1,5 @@
 import { INestApplication } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
@@ -8,7 +9,16 @@ describe('TraceabilityController (integration)', () => {
     let app: INestApplication;
 
     beforeAll(async () => {
-        const mod = await Test.createTestingModule({ imports: [TraceabilityModule] }).compile();
+        const mod = await Test.createTestingModule({
+            imports: [
+                ConfigModule.forRoot({
+                    isGlobal: true,
+                    envFilePath: '.env.test',
+                    ignoreEnvFile: true,
+                }),
+                TraceabilityModule,
+            ],
+        }).compile();
         app = mod.createNestApplication();
         app.setGlobalPrefix('api');
         await app.init();
