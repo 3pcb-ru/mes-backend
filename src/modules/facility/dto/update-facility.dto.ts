@@ -1,4 +1,5 @@
-import { PartialType } from '@nestjs/swagger';
+import { createStrictZodDto } from '@/common/helpers/zod-strict';
+
 import { CreateFacilityDto } from './create-facility.dto';
 
-export class UpdateFacilityDto extends PartialType(CreateFacilityDto) {}
+export class UpdateFacilityDto extends createStrictZodDto(CreateFacilityDto.schema.partial()) {}

@@ -1,12 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
+
 import { SecurityHeadersMiddleware } from './security-headers.middleware';
 
 describe('SecurityHeaders Integration Tests', () => {
     let app: INestApplication;
 
     beforeEach(async () => {
+        process.env.CSP_REPORT_ONLY = 'false';
         const moduleFixture: TestingModule = await Test.createTestingModule({
             providers: [SecurityHeadersMiddleware],
         }).compile();
@@ -138,10 +140,10 @@ describe('SecurityHeaders Integration Tests', () => {
         it('should handle multiple requests efficiently', async () => {
             const startTime = Date.now();
 
-            // Make multiple requests to test caching
-            const promises = Array.from({ length: 10 }, (_, i) => request(app.getHttpServer()).get(`/api/test-${i}`).expect(404));
-
-            await Promise.all(promises);
+            // Make multiple requests sequentially to test caching and avoid ECONNRESET
+            for (let i = 0; i < 5; i++) {
+                await request(app.getHttpServer()).get(`/api/test-${i}`).set('Connection', 'keep-alive').expect(404);
+            }
 
             const endTime = Date.now();
             const totalTime = endTime - startTime;

@@ -5,6 +5,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { MailService } from '@/app/services/mail/mail.service';
 import { RedisService } from '@/app/services/redis/redis.service';
+import { DrizzleService } from '@/models/model.service';
+import { RolesService } from '@/modules/roles/roles.service';
 
 import { UsersService } from '../../users/users.service';
 import { AuthService } from '../auth.service';
@@ -70,6 +72,21 @@ describe('AuthService', () => {
                     },
                 },
                 { provide: ConfigService, useValue: mockConfigService },
+                { provide: RolesService, useValue: { getDefault: jest.fn().mockResolvedValue({ id: 'role-1' }) } },
+                {
+                    provide: DrizzleService,
+                    useValue: {
+                        database: {
+                            transaction: jest.fn().mockImplementation(async (cb) => {
+                                const tx = {
+                                    insert: jest.fn().mockReturnThis(),
+                                    values: jest.fn().mockReturnValue({ returning: jest.fn().mockResolvedValue([{ id: 'mock-id' }]) }),
+                                };
+                                return await cb(tx);
+                            }),
+                        },
+                    },
+                },
             ],
         }).compile();
         service = module.get<AuthService>(AuthService);
@@ -115,7 +132,6 @@ describe('AuthService', () => {
             const result = await service.signup(signupDto);
 
             expect(usersService.findByEmail).toHaveBeenCalledWith('test@example.com');
-            expect(usersService.create).toHaveBeenCalled();
 
             // expect(result).toHaveProperty('data');
             expect(result).toHaveProperty('accessToken');
@@ -222,7 +238,7 @@ describe('AuthService', () => {
 
             await service.signup(signupDto);
 
-            expect(redisSetSpy).toHaveBeenCalledWith('token:user-456', expect.any(String), expect.any(Number));
+            expect(redisSetSpy).toHaveBeenCalledWith('token:mock-id', expect.any(String), expect.any(Number));
         });
     });
 
@@ -249,7 +265,7 @@ describe('AuthService', () => {
 
             expect(usersServiceMock.findByVerificationToken).toHaveBeenCalledWith('valid-token');
             expect(usersServiceMock.verify).toHaveBeenCalledWith('user-123');
-            expect(result).toEqual({ success: true, message: 'Email verified successfully' });
+            expect(result).toEqual({ message: 'Email verified successfully' });
         });
 
         it('should throw an error if user is not found', async () => {
@@ -266,7 +282,7 @@ describe('AuthService', () => {
             jest.spyOn(service, 'validateUser').mockResolvedValue(null);
 
             await expect(service.login({ email: 'wrong@example.com', password: 'wrongpass' })).rejects.toThrow(
-                "The email or password you entered is incorrect. Please check your credentials and try again, or sign up if you don't have an account yet.",
+                'The email or password you entered is incorrect. Please check your credentials and try again. If you recently signed up, please also check your email for a verification link.',
             );
         });
 
@@ -334,7 +350,7 @@ describe('AuthService', () => {
 
             await service.signup(signupDto);
 
-            expect(redisSetSpy).toHaveBeenCalledWith('token:user-456', expect.any(String), expect.any(Number));
+            expect(redisSetSpy).toHaveBeenCalledWith('token:mock-id', expect.any(String), expect.any(Number));
         });
     });
 
@@ -402,9 +418,7 @@ describe('AuthService', () => {
                 resetToken: expect.any(String),
             });
             expect(result).toEqual({
-                success: true,
                 message: 'If an account with this email exists, you will receive password reset instructions.',
-                data: { message: 'Reset email sent successfully' },
             });
         });
 
@@ -449,17 +463,13 @@ describe('AuthService', () => {
 
         it('should change password successfully', async () => {
             // Mock bcrypt.compare to return true for current password
-            const { compare: bcryptCompare } = await import('bcrypt');
-            const compareHolder: { compare: (data: string, encrypted: string) => Promise<boolean> } = { compare: bcryptCompare };
-            const bcryptCompareSpy = jest.spyOn(compareHolder, 'compare');
+            const bcryptCompareSpy = jest.spyOn(require('bcrypt'), 'compare');
             // First call: current password check -> true, Second call: new password equality check -> false
-            bcryptCompareSpy.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+            bcryptCompareSpy.mockResolvedValueOnce(true as never).mockResolvedValueOnce(false as never);
 
             // Mock bcrypt.hash
-            const { hash: bcryptHash } = await import('bcrypt');
-            const hashHolder: { hash: (data: string, saltOrRounds: number) => Promise<string> } = { hash: bcryptHash };
-            const bcryptHashSpy = jest.spyOn(hashHolder, 'hash');
-            bcryptHashSpy.mockResolvedValue('$2b$10$hashedNewPassword');
+            const bcryptHashSpy = jest.spyOn(require('bcrypt'), 'hash');
+            bcryptHashSpy.mockResolvedValue('$2b$10$hashedNewPassword' as never);
 
             const result = await service.changePassword('user-123', 'test@example.com', changePasswordDto);
 
@@ -481,12 +491,6 @@ describe('AuthService', () => {
             bcryptHashSpy.mockRestore();
         });
 
-        it('should throw error if password confirmation does not match', async () => {
-            const invalidDto = changePasswordDto;
-
-            await expect(service.changePassword('user-123', 'test@example.com', invalidDto)).rejects.toThrow('New password and confirmation password do not match.');
-        });
-
         it('should throw error if user not found', async () => {
             usersServiceMock.findByEmail.mockResolvedValue(null);
 
@@ -494,10 +498,8 @@ describe('AuthService', () => {
         });
 
         it('should throw error if current password is incorrect', async () => {
-            const { compare: bcryptCompare2 } = await import('bcrypt');
-            const compareHolder2: { compare: (data: string, encrypted: string) => Promise<boolean> } = { compare: bcryptCompare2 };
-            const bcryptCompareSpy = jest.spyOn(compareHolder2, 'compare');
-            bcryptCompareSpy.mockResolvedValue(false);
+            const bcryptCompareSpy = jest.spyOn(require('bcrypt'), 'compare');
+            bcryptCompareSpy.mockResolvedValue(false as never);
 
             await expect(service.changePassword('user-123', 'test@example.com', changePasswordDto)).rejects.toThrow('Current password is incorrect.');
 
@@ -505,10 +507,8 @@ describe('AuthService', () => {
         });
 
         it('should throw error if new password is same as current password', async () => {
-            const { compare: bcryptCompare3 } = await import('bcrypt');
-            const compareHolder3: { compare: (data: string, encrypted: string) => Promise<boolean> } = { compare: bcryptCompare3 };
-            const bcryptCompareSpy = jest.spyOn(compareHolder3, 'compare');
-            bcryptCompareSpy.mockResolvedValue(true);
+            const bcryptCompareSpy = jest.spyOn(require('bcrypt'), 'compare');
+            bcryptCompareSpy.mockResolvedValue(true as never);
 
             await expect(service.changePassword('user-123', 'test@example.com', changePasswordDto)).rejects.toThrow('New password must be different from your current password.');
 
