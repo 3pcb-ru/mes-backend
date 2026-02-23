@@ -42,6 +42,20 @@ jobs:
       - name: Run unit tests
         run: pnpm test --silent
 
+      - name: Run integration tests
+        run: pnpm test:integration --forceExit
+        timeout-minutes: 10
+
+      - name: Debug Docker (if tests fail)
+        if: failure()
+        run: |
+          echo "=== Docker Status ==="
+          docker ps -a
+          echo "=== Docker Logs ==="
+          docker compose -f compose.test.yml logs || true
+          echo "=== Network ==="
+          docker network ls || true
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
