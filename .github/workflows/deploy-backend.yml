@@ -7,10 +7,8 @@ on:
       - dev
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    environment: production
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,6 +21,7 @@ jobs:
           node-version: 18
           cache: 'pnpm'
 
+      # pnpm isn't included by default; install before using it.
       - name: Install pnpm
         run: npm install -g pnpm
 
@@ -32,11 +31,32 @@ jobs:
       - name: Build backend
         run: pnpm run build
 
-      # optional: run tests depending on your strategy
       - name: Run tests
         run: pnpm test --silent
 
-      # copy the build to the remote server and restart service
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-build
+          path: |
+            dist
+            assets
+            package.json
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: backend-build
+          path: build-output
+
       - name: Deploy to VM
         uses: appleboy/ssh-action@v0.1.8
         with:
@@ -46,19 +66,13 @@ jobs:
           port: 22
           script: |
             set -e
-            # create deployment directory if it does not exist
             mkdir -p ~/mes-backend
-            # remove old contents except .env
-            rsync -av --delete --exclude ".env" ./dist/ ~/mes-backend/dist/
-            rsync -av --delete --exclude ".env" ./assets/ ~/mes-backend/assets/
-            rsync -av --delete --exclude "node_modules" ./package.json ~/mes-backend/package.json
-            # install production dependencies
+            # sync artifact contents, preserving .env where present
+            rsync -av --delete --exclude ".env" build-output/dist/ ~/mes-backend/dist/
+            rsync -av --delete --exclude ".env" build-output/assets/ ~/mes-backend/assets/
+            rsync -av --delete --exclude "node_modules" build-output/package.json ~/mes-backend/package.json
             cd ~/mes-backend
             npm install --production --omit=dev
-            # make sure PORT is set to 4000 so frontend can reach it
-            # (assumes your process manager/pm2/systemd reads it from .env)
-            
-            # restart the service (adjust to your init system)
             if command -v pm2 >/dev/null 2>&1; then
               pm2 restart mes-backend || pm2 start dist/main.js --name mes-backend --env production
             else
