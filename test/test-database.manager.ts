@@ -270,6 +270,9 @@ export class TestDatabaseManager {
       const client = await this.pool.connect();
       
       try {
+        // Delete any existing test users first
+        await client.query('DELETE FROM users WHERE email IN ($1, $2)', ['test@example.com', 'other@example.com']);
+        
         // Create consistent test users with known UUIDs
         // These UUIDs must match the ones used in the integration tests
         const testUsers = [
@@ -292,16 +295,17 @@ export class TestDatabaseManager {
         ];
 
         for (const user of testUsers) {
-          await client.query(`
-            INSERT INTO users (id, email, password, first_name, last_name, is_verified, _created, _updated)
-            VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-            ON CONFLICT (email) DO UPDATE SET
-              id = EXCLUDED.id,
-              first_name = EXCLUDED.first_name,
-              last_name = EXCLUDED.last_name,
-              is_verified = EXCLUDED.is_verified,
-              _updated = NOW()
-          `, [user.id, user.email, user.password, user.first_name, user.last_name, user.is_verified]);
+          try {
+            await client.query(`
+              INSERT INTO users (id, email, password, first_name, last_name, is_verified, _created, _updated)
+              VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+            `, [user.id, user.email, user.password, user.first_name, user.last_name, user.is_verified]);
+          } catch (err: any) {
+            // If user already exists, that's OK
+            if (err.code !== '23505') {
+              throw err;
+            }
+          }
         }
 
         // Verify users were actually created
