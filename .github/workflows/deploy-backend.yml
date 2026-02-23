@@ -48,7 +48,8 @@ jobs:
           DB_PORT: 5433
           REDIS_HOST: localhost
           REDIS_PORT: 6379
-        run: pnpm test      - name: Run unit tests
+        run: pnpm test      
+        #- name: Run unit tests
         #run: pnpm test --silent
 
       - name: Run integration tests
