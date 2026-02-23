@@ -1,0 +1,69 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build backend
+        run: pnpm run build
+
+      # optional: run tests depending on your strategy
+      - name: Run tests
+        run: pnpm test --silent
+
+      # copy the build to the remote server and restart service
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.VM_IP }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          port: 22
+          script: |
+            set -e
+            # create deployment directory if it does not exist
+            mkdir -p ~/mes-backend
+            # remove old contents except .env
+            rsync -av --delete --exclude ".env" ./dist/ ~/mes-backend/dist/
+            rsync -av --delete --exclude ".env" ./assets/ ~/mes-backend/assets/
+            rsync -av --delete --exclude "node_modules" ./package.json ~/mes-backend/package.json
+            # install production dependencies
+            cd ~/mes-backend
+            npm install --production --omit=dev
+            # make sure PORT is set to 4000 so frontend can reach it
+            # (assumes your process manager/pm2/systemd reads it from .env)
+            
+            # restart the service (adjust to your init system)
+            if command -v pm2 >/dev/null 2>&1; then
+              pm2 restart mes-backend || pm2 start dist/main.js --name mes-backend --env production
+            else
+              sudo systemctl restart mes-backend.service || true
+            fi
+
+      - name: Notify deployment result
+        run: echo "Deployment finished"
