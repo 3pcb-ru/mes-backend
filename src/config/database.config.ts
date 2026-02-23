@@ -39,3 +39,12 @@ export const makeDrizzleConfigs = () => {
         ssl: false,
     };
 };
+export const databaseConfig = registerAs(DATABASE_CONFIG_TOKEN, (): IDatabaseConfig => {
+    return {
+        host: process.env.POSTGRES_HOST || 'localhost',
+        port: parseInt(process.env.POSTGRES_PORT || '5433', 10),
+        username: process.env.POSTGRES_USER || 'test_user',
+        password: process.env.POSTGRES_PASSWORD || 'test_password',
+        database: process.env.POSTGRES_DB || 'mes_test',
+    } satisfies IDatabaseConfig;
+});
