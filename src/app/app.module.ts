@@ -20,6 +20,12 @@ import { TicketModule } from '@/modules/ticket/ticket.module';
 import { UserAddressesModule } from '@/modules/user-addresses/user-addresses.module';
 import { UsersModule } from '@/modules/users/users.module';
 import { WorkOrderModule } from '@/modules/work-order/work-order.module';
+import { FacilityModule } from '@/modules/facility/facility.module';
+import { InventoryModule } from '@/modules/inventory/inventory.module';
+import { ProductModule } from '@/modules/product/product.module';
+import { ExecutionModule } from '@/modules/execution/execution.module';
+import { TraceabilityModule } from '@/modules/traceability/traceability.module';
+import { ConnectivityModule } from '@/modules/connectivity/connectivity.module';
 
 // Services
 import { AppController } from './app.controller';
@@ -51,6 +57,12 @@ import { RedisModule } from './services/redis/redis.module';
         WorkOrderModule,
         RolesModule,
         NotificationModule,
+        FacilityModule,
+        InventoryModule,
+        ProductModule,
+        ExecutionModule,
+        TraceabilityModule,
+        ConnectivityModule,
         HealthModule,
     ],
     controllers: [AppController],

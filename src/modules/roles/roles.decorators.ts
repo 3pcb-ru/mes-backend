@@ -1,10 +1,12 @@
 import { applyDecorators, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiOperation } from '@nestjs/swagger';
 import { ZodResponse } from 'nestjs-zod';
-import { PermissionGuard } from '../auth/guards/permission.guard';
+
 import { Permissions } from '@/common/permissions';
+
 import { RequiresPermissions } from '../auth/decorators/permission.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionGuard } from '../auth/guards/permission.guard';
 import {
     AssignRoleApiResponseDto,
     PermissionsListApiResponseDto,
@@ -14,7 +16,6 @@ import {
     RoleWithPermissionsLookupApiResponseDTO,
     UpdateRolePermissionApiResponseDto,
 } from './roles.dto';
-import { UserApiResponseDto } from '../users/users.dto';
 
 const rolesEndpointConfig = {
     create: () =>

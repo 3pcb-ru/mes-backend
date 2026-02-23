@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
-import { RolesService } from './roles.service';
-import { RedisModule } from '@/app/services/redis/redis.module';
-import { DrizzleModule } from '@/models/model.module';
+
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
-import { RolesController } from './roles.controller';
-import { UsersModule } from '../users/users.module';
+import { RedisModule } from '@/app/services/redis/redis.module';
 import { FilterService } from '@/common/services/filter.service';
+import { DrizzleModule } from '@/models/model.module';
+
+import { UsersModule } from '../users/users.module';
+import { RolesController } from './roles.controller';
+import { RolesService } from './roles.service';
 
 @Module({
     imports: [RedisModule, DrizzleModule, UsersModule],
@@ -13,4 +15,4 @@ import { FilterService } from '@/common/services/filter.service';
     providers: [RolesService, CustomLoggerService, FilterService],
     exports: [RolesService],
 })
-export class RolesModule { }
+export class RolesModule {}

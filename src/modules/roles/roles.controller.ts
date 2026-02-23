@@ -1,13 +1,15 @@
-import { Param, Body, Controller, Get, Post, Put, Query } from '@nestjs/common';
-import { RolesService } from './roles.service';
-import { RolesDecorators } from './roles.decorators';
-import { ok, OkResponseBuilder } from '@/utils';
-import { AssignRoleDto, CreateRoleDto, UpdateRoleDetailsDto, UpdateRolePermissionsDto } from './roles.dto';
+import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
+
 import { PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
+import { ok, OkResponseBuilder } from '@/utils';
+
+import { RolesDecorators } from './roles.decorators';
+import { AssignRoleDto, CreateRoleDto, UpdateRoleDetailsDto, UpdateRolePermissionsDto } from './roles.dto';
+import { RolesService } from './roles.service';
 
 @Controller('roles')
 export class RolesController {
-    constructor(private readonly rolesService: RolesService) { }
+    constructor(private readonly rolesService: RolesService) {}
 
     @Post('create')
     @RolesDecorators('create')

@@ -1,8 +1,9 @@
+import z from 'zod';
+
 import { DEFAULT_CHAR_LENGTH } from '@/common/constants';
 import { createApiPaginatedResponseDto, createApiResponseDto } from '@/common/helpers/api-response';
 import { createStrictZodDto } from '@/common/helpers/zod-strict';
 import { permissionSelectSchema, roleSelectSchema, roleUpdateSchema, userSelectSchema } from '@/models/zod-schemas';
-import z from 'zod';
 
 //Input Schemas
 export const updateRolePermissionsSchema = z.object({
@@ -35,16 +36,16 @@ export const roleWithPermissionsListResponseSchema = roleSelectSchema.extend({
 });
 
 // Input DTO's
-export class UpdateRolePermissionsDto extends createStrictZodDto(updateRolePermissionsSchema) { }
-export class UpdateRoleDetailsDto extends createStrictZodDto(updateRoleDetailsSchema) { }
-export class CreateRoleDto extends createStrictZodDto(createRoleSchema) { }
-export class AssignRoleDto extends createStrictZodDto(assignRoleSchema) { }
+export class UpdateRolePermissionsDto extends createStrictZodDto(updateRolePermissionsSchema) {}
+export class UpdateRoleDetailsDto extends createStrictZodDto(updateRoleDetailsSchema) {}
+export class CreateRoleDto extends createStrictZodDto(createRoleSchema) {}
+export class AssignRoleDto extends createStrictZodDto(assignRoleSchema) {}
 
 //Response DTO
-export class RoleApiResponseDto extends createApiResponseDto(roleSelectSchema) { }
-export class RoleWithPermissionsApiResponseDTO extends createApiResponseDto(roleWithPermissionsListResponseSchema) { }
-export class RoleWithPermissionsLookupApiResponseDTO extends createApiResponseDto(z.array(roleWithPermissionsListResponseSchema)) { }
-export class RolePaginatedApiResponseDto extends createApiPaginatedResponseDto(roleSelectSchema) { }
-export class PermissionsListApiResponseDto extends createApiResponseDto(z.array(permissionSelectSchema)) { }
-export class UpdateRolePermissionApiResponseDto extends createApiResponseDto(z.boolean()) { }
-export class AssignRoleApiResponseDto extends createApiResponseDto(userSelectSchema) { }
+export class RoleApiResponseDto extends createApiResponseDto(roleSelectSchema) {}
+export class RoleWithPermissionsApiResponseDTO extends createApiResponseDto(roleWithPermissionsListResponseSchema) {}
+export class RoleWithPermissionsLookupApiResponseDTO extends createApiResponseDto(z.array(roleWithPermissionsListResponseSchema)) {}
+export class RolePaginatedApiResponseDto extends createApiPaginatedResponseDto(roleSelectSchema) {}
+export class PermissionsListApiResponseDto extends createApiResponseDto(z.array(permissionSelectSchema)) {}
+export class UpdateRolePermissionApiResponseDto extends createApiResponseDto(z.boolean()) {}
+export class AssignRoleApiResponseDto extends createApiResponseDto(userSelectSchema) {}

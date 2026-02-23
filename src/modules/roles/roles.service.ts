@@ -1,19 +1,20 @@
-import { DrizzleService } from '@/models/model.service';
-import { BadRequestException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { CustomLoggerService } from '@/app/services/logger/logger.service';
-import { and, eq, inArray } from 'drizzle-orm';
-import { rolePermissions, roles as roleSchema } from '@/models/schema/roles.schema';
-import { RedisService } from '@/app/services/redis/redis.service';
-import { permissions } from '@/models/schema';
-import { rolePermissions as rolePermissionsSchema } from '@/models/schema/roles.schema';
-import { DrizzleTransaction } from '@/models/model.types';
-import { RoleInsertInput } from '@/models/zod-schemas';
-import { user as userSchema } from '@/models/schema/users.schema';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { UsersService } from '../users/users.service';
-import { FilterQueryDto, PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
+import { and, eq, inArray } from 'drizzle-orm';
+
+import { CustomLoggerService } from '@/app/services/logger/logger.service';
+import { RedisService } from '@/app/services/redis/redis.service';
+import { PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
 import { BaseFilterableService } from '@/common/services/base-filterable.service';
 import { FilterService } from '@/common/services/filter.service';
+import { DrizzleService } from '@/models/model.service';
+import { DrizzleTransaction } from '@/models/model.types';
+import { permissions } from '@/models/schema';
+import { rolePermissions, rolePermissions as rolePermissionsSchema, roles as roleSchema } from '@/models/schema/roles.schema';
+import { user as userSchema } from '@/models/schema/users.schema';
+import { RoleInsertInput } from '@/models/zod-schemas';
+
+import { UsersService } from '../users/users.service';
 import { UpdateRoleDetailsDto } from './roles.dto';
 
 @Injectable()
