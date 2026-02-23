@@ -50,6 +50,10 @@ jobs:
             dist
             assets
             package.json
+            pnpm-lock.yaml
+            Containerfile.prod
+            compose.prod.yml
+            .dockerignore
 
   deploy:
     needs: build
@@ -73,10 +77,10 @@ jobs:
           key: ${{ secrets.VM_PRIVATE_KEY }}
           port: 22
           source: "build-output/*"
-          target: "/tmp/deploy"
+          target: "/home/${{ secrets.VM_USER }}/mes-backend-deploy"
           rm: true
 
-      - name: Extract and restart service
+      - name: Build and deploy container
         uses: appleboy/ssh-action@v0.1.8
         with:
           host: ${{ secrets.VM_IP }}
@@ -85,25 +89,71 @@ jobs:
           port: 22
           script: |
             set -e
-            mkdir -p ~/mes-backend
-            # copy/move files from temp location to deployment directory
-            [ -d /tmp/deploy/build-output/dist ] && cp -r /tmp/deploy/build-output/dist ~/mes-backend/ || cp -r /tmp/deploy/dist ~/mes-backend/ 2>/dev/null || true
-            [ -d /tmp/deploy/build-output/assets ] && cp -r /tmp/deploy/build-output/assets ~/mes-backend/ || cp -r /tmp/deploy/assets ~/mes-backend/ 2>/dev/null || true
-            [ -f /tmp/deploy/build-output/package.json ] && cp /tmp/deploy/build-output/package.json ~/mes-backend/ || cp /tmp/deploy/package.json ~/mes-backend/ 2>/dev/null || true
-            # clean up temp
-            rm -rf /tmp/deploy
-            # ensure node and npm are available
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-            # install production dependencies
-            cd ~/mes-backend
-            npm install --production --omit=dev || echo "Node.js/npm not found. Please install Node.js 20+ on the VM."
-            # restart service
-            if command -v pm2 >/dev/null 2>&1; then
-              pm2 restart mes-backend || pm2 start dist/main.js --name mes-backend --env production
+            DEPLOY_DIR="/home/${{ secrets.VM_USER }}/mes-backend"
+            TEMP_DIR="/home/${{ secrets.VM_USER }}/mes-backend-deploy"
+            
+            # create deployment directory if it doesn't exist
+            mkdir -p "$DEPLOY_DIR"
+            
+            # handle nested directory structure from scp
+            if [ -d "$TEMP_DIR/build-output" ]; then
+              SOURCE_DIR="$TEMP_DIR/build-output"
             else
-              sudo systemctl restart mes-backend.service || echo "Neither pm2 nor systemd service found. Please set up a process manager."
+              SOURCE_DIR="$TEMP_DIR"
             fi
+            
+            # copy artifacts to deployment directory
+            cp -r "$SOURCE_DIR/dist" "$DEPLOY_DIR/" 2>/dev/null || true
+            cp -r "$SOURCE_DIR/assets" "$DEPLOY_DIR/" 2>/dev/null || true
+            cp "$SOURCE_DIR/package.json" "$DEPLOY_DIR/" 2>/dev/null || true
+            cp "$SOURCE_DIR/Containerfile.prod" "$DEPLOY_DIR/Dockerfile" 2>/dev/null || true
+            cp "$SOURCE_DIR/compose.prod.yml" "$DEPLOY_DIR/docker-compose.yml" 2>/dev/null || true
+            
+            # clean up temp directory
+            rm -rf "$TEMP_DIR"
+            
+            # ensure .env exists
+            if [ ! -f "$DEPLOY_DIR/.env" ]; then
+              echo "Warning: .env not found in $DEPLOY_DIR. Create it with required environment variables."
+              # Create a minimal .env if it doesn't exist
+              touch "$DEPLOY_DIR/.env"
+            fi
+            
+            # navigate to deployment directory
+            cd "$DEPLOY_DIR"
+            
+            # build the docker image
+            if command -v docker >/dev/null 2>&1; then
+              DOCKER_CMD="docker"
+            elif command -v podman >/dev/null 2>&1; then
+              DOCKER_CMD="podman"
+            else
+              echo "Error: Neither docker nor podman found. Please install Docker or Podman on the VM."
+              exit 1
+            fi
+            
+            echo "Building Docker image using $DOCKER_CMD..."
+            $DOCKER_CMD build -f Dockerfile -t mes-backend:latest .
+            
+            # use docker-compose to manage the service
+            if command -v docker-compose >/dev/null 2>&1; then
+              COMPOSE_CMD="docker-compose"
+            elif command -v podman-compose >/dev/null 2>&1; then
+              COMPOSE_CMD="podman-compose"
+            else
+              echo "Error: Neither docker-compose nor podman-compose found. Please install Docker Compose or Podman Compose."
+              exit 1
+            fi
+            
+            # set environment variable for image tag
+            export CI_REGISTRY_IMAGE="mes-backend"
+            export CI_COMMIT_SHA="latest"
+            
+            echo "Starting backend container with $COMPOSE_CMD..."
+            $COMPOSE_CMD down || true
+            $COMPOSE_CMD up -d
+            
+            echo "Backend container deployed successfully!"
 
       - name: Notify deployment result
         run: echo "Deployment finished"
