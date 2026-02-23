@@ -2,13 +2,17 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
-import { ConnectivityModule } from '@/modules/connectivity/connectivity.module';
+import { ConnectivityController } from '@/modules/connectivity/connectivity.controller';
+import { ConnectivityService } from '@/modules/connectivity/connectivity.service';
 
 describe('ConnectivityController (integration)', () => {
     let app: INestApplication;
 
     beforeAll(async () => {
-        const mod = await Test.createTestingModule({ imports: [ConnectivityModule] }).compile();
+        const mod = await Test.createTestingModule({
+            controllers: [ConnectivityController],
+            providers: [ConnectivityService],
+        }).compile();
         app = mod.createNestApplication();
         app.setGlobalPrefix('api');
         await app.init();

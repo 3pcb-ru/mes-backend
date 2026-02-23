@@ -4,6 +4,7 @@ import request from 'supertest';
 import { InventoryController } from '@/modules/inventory/inventory.controller';
 import { InventoryService } from '@/modules/inventory/inventory.service';
 import { FacilityService } from '@/modules/facility/facility.service';
+import { TransferService } from '@/modules/inventory/services/transfer.service';
 
 describe('InventoryController (integration)', () => {
   let app: INestApplication;
@@ -13,7 +14,7 @@ describe('InventoryController (integration)', () => {
     // Create a minimal test module without complex dependencies
     const moduleRef = await Test.createTestingModule({
       controllers: [InventoryController],
-      providers: [InventoryService, FacilityService],
+      providers: [InventoryService, FacilityService, TransferService],
     }).compile();
 
     app = moduleRef.createNestApplication();
