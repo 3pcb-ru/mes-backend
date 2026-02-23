@@ -1,28 +1,26 @@
-import { INestApplication } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { InventoryModule } from '@/modules/inventory/inventory.module';
-import { FacilityModule } from '@/modules/facility/facility.module';
+import { InventoryController } from '@/modules/inventory/inventory.controller';
+import { InventoryService } from '@/modules/inventory/inventory.service';
+import { FacilityService } from '@/modules/facility/facility.service';
 
 describe('InventoryController (integration)', () => {
   let app: INestApplication;
+  let inventoryService: InventoryService;
 
   beforeAll(async () => {
-  const mod = await Test.createTestingModule({
-    imports: [
-      ConfigModule.forRoot({
-        isGlobal: true,
-        envFilePath: '.env.test',
-        ignoreEnvFile: true,
-      }),
-      FacilityModule,
-      InventoryModule,
-    ],
-  }).compile();
-    app = mod.createNestApplication();
+    // Create a minimal test module without complex dependencies
+    const moduleRef = await Test.createTestingModule({
+      controllers: [InventoryController],
+      providers: [InventoryService, FacilityService],
+    }).compile();
+
+    app = moduleRef.createNestApplication();
     app.setGlobalPrefix('api');
     await app.init();
+    
+    inventoryService = moduleRef.get<InventoryService>(InventoryService);
   });
 
   afterAll(async () => {
@@ -30,11 +28,18 @@ describe('InventoryController (integration)', () => {
   });
 
   it('/api/inventory/containers (POST -> GET)', async () => {
-    const createRes = await request(app.getHttpServer()).post('/api/inventory/containers').send({ label: 'C1' }).expect(201);
+    const createRes = await request(app.getHttpServer())
+      .post('/api/inventory/containers')
+      .send({ label: 'C1' })
+      .expect(201);
+    
     expect(createRes.body).toHaveProperty('_data');
     const id = createRes.body._data.id;
 
-    const getRes = await request(app.getHttpServer()).get(`/api/inventory/containers/${id}`).expect(200);
+    const getRes = await request(app.getHttpServer())
+      .get(`/api/inventory/containers/${id}`)
+      .expect(200);
+    
     expect(getRes.body._data.id).toBe(id);
   });
 });

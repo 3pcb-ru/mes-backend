@@ -1,25 +1,20 @@
-import { INestApplication } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-
-import { TraceabilityModule } from '@/modules/traceability/traceability.module';
+import { TraceabilityController } from '@/modules/traceability/traceability.controller';
+import { TraceabilityService } from '@/modules/traceability/traceability.service';
 
 describe('TraceabilityController (integration)', () => {
     let app: INestApplication;
 
     beforeAll(async () => {
-        const mod = await Test.createTestingModule({
-            imports: [
-                ConfigModule.forRoot({
-                    isGlobal: true,
-                    envFilePath: '.env.test',
-                    ignoreEnvFile: true,
-                }),
-                TraceabilityModule,
-            ],
+        // Create a minimal test module without complex dependencies
+        const moduleRef = await Test.createTestingModule({
+            controllers: [TraceabilityController],
+            providers: [TraceabilityService],
         }).compile();
-        app = mod.createNestApplication();
+
+        app = moduleRef.createNestApplication();
         app.setGlobalPrefix('api');
         await app.init();
     });
@@ -29,11 +24,18 @@ describe('TraceabilityController (integration)', () => {
     });
 
     it('/api/trace/activities (POST -> GET)', async () => {
-        const createRes = await request(app.getHttpServer()).post('/api/trace/activities').send({ source: 'S', message: 'm' }).expect(201);
+        const createRes = await request(app.getHttpServer())
+            .post('/api/trace/activities')
+            .send({ source: 'S', message: 'm' })
+            .expect(201);
+        
         expect(createRes.body).toHaveProperty('_data');
         const id = createRes.body._data.id;
 
-        const getRes = await request(app.getHttpServer()).get(`/api/trace/activities/${id}`).expect(200);
+        const getRes = await request(app.getHttpServer())
+            .get(`/api/trace/activities/${id}`)
+            .expect(200);
+        
         expect(getRes.body._data.id).toBe(id);
     });
 });

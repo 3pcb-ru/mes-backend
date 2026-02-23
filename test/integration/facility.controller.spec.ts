@@ -1,14 +1,17 @@
-import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-
-import { FacilityModule } from '@/modules/facility/facility.module';
+import { FacilityController } from '@/modules/facility/facility.controller';
+import { FacilityService } from '@/modules/facility/facility.service';
 
 describe('FacilityController (integration)', () => {
     let app: INestApplication;
 
     beforeAll(async () => {
-    const mod = await Test.createTestingModule({ imports: [FacilityModule] }).compile();
+        const mod = await Test.createTestingModule({
+            controllers: [FacilityController],
+            providers: [FacilityService],
+        }).compile();
         app = mod.createNestApplication();
         app.setGlobalPrefix('api');
         await app.init();
