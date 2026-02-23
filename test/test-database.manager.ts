@@ -270,6 +270,17 @@ export class TestDatabaseManager {
       const client = await this.pool.connect();
       
       try {
+        // Create a test role first (or reuse if exists)
+        const testRoleId = '00000000-0000-0000-0000-000000000001';
+        await client.query(`
+          DELETE FROM roles WHERE id = $1
+        `, [testRoleId]);
+        
+        await client.query(`
+          INSERT INTO roles (id, name, description, is_default, is_admin, _created, _updated)
+          VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+        `, [testRoleId, 'test_role', 'Test Role', false, false]);
+        
         // Delete any existing test users first
         await client.query('DELETE FROM users WHERE email IN ($1, $2)', ['test@example.com', 'other@example.com']);
         
@@ -282,7 +293,8 @@ export class TestDatabaseManager {
             password: '$2b$10$placeholder.hash.for.testing',
             first_name: 'Test',
             last_name: 'User',
-            is_verified: true
+            is_verified: true,
+            role_id: testRoleId
           },
           {
             id: 'f2a84c9b-8e7f-4d6c-9b2a-1e3f4a5b6c7d', // This will be otherUserId
@@ -290,16 +302,17 @@ export class TestDatabaseManager {
             password: '$2b$10$placeholder.hash.for.testing',
             first_name: 'Other',
             last_name: 'User',
-            is_verified: true
+            is_verified: true,
+            role_id: testRoleId
           }
         ];
 
         for (const user of testUsers) {
           try {
             await client.query(`
-              INSERT INTO users (id, email, password, first_name, last_name, is_verified, _created, _updated)
-              VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-            `, [user.id, user.email, user.password, user.first_name, user.last_name, user.is_verified]);
+              INSERT INTO users (id, email, password, first_name, last_name, is_verified, role_id, _created, _updated)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+            `, [user.id, user.email, user.password, user.first_name, user.last_name, user.is_verified, user.role_id]);
           } catch (err: any) {
             // If user already exists, that's OK
             if (err.code !== '23505') {
