@@ -20,16 +20,14 @@ jobs:
         with:
           node-version: 22
 
-      # pnpm isn't included by default; install before using it.
       - name: Install pnpm
         run: npm install -g pnpm
 
-      # cache pnpm store manually to avoid requiring pnpm during setup-node
       - name: Cache pnpm store
         uses: actions/cache@v3
         with:
           path: ~/.pnpm-store
-          key: ${{ runner.OS }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          key: ${{ runner.OS }}-pnpm-${hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.OS }}-pnpm-
 
@@ -38,36 +36,15 @@ jobs:
 
       - name: Build backend
         run: pnpm run build
-      # Remove 'Start Services' and 'Start Test Database' steps
-      # They are redundant and conflict with your TestDatabaseManager class.
-      #- name: Run all tests
-      #  env:
-      #    NODE_ENV: test
-      #    # Matches your database.config.ts names
-      #    POSTGRES_HOST: localhost
-      #    POSTGRES_PORT: 5433
-      #    POSTGRES_USER: test_user
-      #    POSTGRES_PASSWORD: test_password
-       #   POSTGRES_DB: mes_test
-          # Matches your redisConfig names
-       #   REDIS_HOST: localhost
-       #   REDIS_PORT: 6379
-       #   REDIS_PASSWORD: test_redis_password
-       # run: pnpm test
-        
-      #- name: Run integration tests
-      #  run: pnpm test:integration --forceExit
-      #  timeout-minutes: 10
 
-      - name: Debug Docker (if tests fail)
-        if: failure()
-        run: |
-          echo "=== Docker Status ==="
-          docker ps -a
-          echo "=== Docker Logs ==="
-          docker compose -f compose.test.yml logs || true
-          echo "=== Network ==="
-          docker network ls || true
+      # --- RE-ENABLE TESTS HERE ONCE CONFIG IS FIXED ---
+      # - name: Run all tests
+      #   env:
+      #     NODE_ENV: test
+      #     POSTGRES_HOST: localhost
+      #     POSTGRES_PORT: 5433
+      #     ...
+      #   run: pnpm test
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -78,6 +55,7 @@ jobs:
             assets
             package.json
             pnpm-lock.yaml
+            pnpm-workspace.yaml
             Containerfile.prod
             compose.prod.yml
             .dockerignore
@@ -119,68 +97,62 @@ jobs:
             DEPLOY_DIR="/home/${{ secrets.VM_USER }}/mes-backend"
             TEMP_DIR="/home/${{ secrets.VM_USER }}/mes-backend-deploy"
             
-            # create deployment directory if it doesn't exist
             mkdir -p "$DEPLOY_DIR"
             
-            # handle nested directory structure from scp
             if [ -d "$TEMP_DIR/build-output" ]; then
               SOURCE_DIR="$TEMP_DIR/build-output"
             else
               SOURCE_DIR="$TEMP_DIR"
             fi
             
-            # copy artifacts to deployment directory
+            # --- UPDATED COPY BLOCK ---
+            echo "Copying artifacts to deployment directory..."
             cp -r "$SOURCE_DIR/dist" "$DEPLOY_DIR/" 2>/dev/null || true
             cp -r "$SOURCE_DIR/assets" "$DEPLOY_DIR/" 2>/dev/null || true
             cp "$SOURCE_DIR/package.json" "$DEPLOY_DIR/" 2>/dev/null || true
+            cp "$SOURCE_DIR/pnpm-lock.yaml" "$DEPLOY_DIR/" 2>/dev/null || true
+            cp "$SOURCE_DIR/pnpm-workspace.yaml" "$DEPLOY_DIR/" 2>/dev/null || true
             cp "$SOURCE_DIR/Containerfile.prod" "$DEPLOY_DIR/Dockerfile" 2>/dev/null || true
             cp "$SOURCE_DIR/compose.prod.yml" "$DEPLOY_DIR/docker-compose.yml" 2>/dev/null || true
             
-            # clean up temp directory
             rm -rf "$TEMP_DIR"
             
-            # ensure .env exists
             if [ ! -f "$DEPLOY_DIR/.env" ]; then
-              echo "Warning: .env not found in $DEPLOY_DIR. Create it with required environment variables."
-              # Create a minimal .env if it doesn't exist
+              echo "Warning: .env not found. Creating minimal .env..."
               touch "$DEPLOY_DIR/.env"
             fi
             
-            # navigate to deployment directory
             cd "$DEPLOY_DIR"
             
-            # build the docker image
             if command -v docker >/dev/null 2>&1; then
               DOCKER_CMD="docker"
             elif command -v podman >/dev/null 2>&1; then
               DOCKER_CMD="podman"
             else
-              echo "Error: Neither docker nor podman found. Please install Docker or Podman on the VM."
+              echo "Error: Docker/Podman not found."
               exit 1
             fi
             
-            echo "Building Docker image using $DOCKER_CMD..."
+            echo "Pruning builder cache to avoid Alpine version issues..."
+            $DOCKER_CMD builder prune -f
+            
+            echo "Building Docker image..."
             $DOCKER_CMD build -f Dockerfile -t mes-backend:latest .
             
-            # use docker-compose to manage the service
             if command -v docker-compose >/dev/null 2>&1; then
               COMPOSE_CMD="docker-compose"
             elif command -v podman-compose >/dev/null 2>&1; then
               COMPOSE_CMD="podman-compose"
             else
-              echo "Error: Neither docker-compose nor podman-compose found. Please install Docker Compose or Podman Compose."
+              echo "Error: Compose not found."
               exit 1
             fi
             
-            # set environment variable for image tag
             export CI_REGISTRY_IMAGE="mes-backend"
             export CI_COMMIT_SHA="latest"
             
-            echo "Starting backend container with $COMPOSE_CMD..."
+            echo "Restarting containers..."
             $COMPOSE_CMD down || true
             $COMPOSE_CMD up -d
             
             echo "Backend container deployed successfully!"
-
-      - name: Notify deployment result
-        run: echo "Deployment finished"
