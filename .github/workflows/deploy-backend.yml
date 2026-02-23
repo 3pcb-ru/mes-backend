@@ -38,6 +38,9 @@ jobs:
 
       - name: Build backend
         run: pnpm run build
+      # Run tests in parallel with the build to speed up the workflow
+      - name: Start Test Database
+        run: docker compose -f compose.test.yml up -d
 
       - name: Run unit tests
         run: pnpm test --silent
