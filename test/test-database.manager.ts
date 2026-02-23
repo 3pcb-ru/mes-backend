@@ -26,13 +26,42 @@ export class TestDatabaseManager {
    */
   async startTestDatabase(): Promise<void> {
     console.log('🐳 Starting test PostgreSQL and Redis containers...');
+    console.log('📋 Checking Docker availability...');
     
     try {
+      // Check if docker and docker-compose are available
+      try {
+        execSync('docker --version', { stdio: 'pipe' });
+        console.log('✅ Docker is available');
+      } catch {
+        throw new Error('Docker is not installed or not in PATH');
+      }
+
+      try {
+        execSync('docker compose version', { stdio: 'pipe' });
+        console.log('✅ Docker Compose is available');
+      } catch {
+        throw new Error('Docker Compose is not installed or not in PATH');
+      }
+
+      console.log('🚀 Starting containers with docker compose...');
       // Start both test database and redis using docker-compose
+      try {
+        execSync('docker compose -f compose.test.yml down -v 2>/dev/null || true', {
+          stdio: 'pipe',
+          cwd: process.cwd(),
+        });
+        console.log('✅ Cleaned up old containers');
+      } catch (e) {
+        console.log('⚠️  Could not clean up old containers (this is OK)');
+      }
+
       execSync('docker compose -f compose.test.yml up -d test_postgres test_redis', {
-        stdio: 'pipe',
+        stdio: 'inherit',
         cwd: process.cwd(),
       });
+      
+      console.log('✅ Containers started, waiting for readiness...');
 
       // Wait for database to be ready
       await this.waitForDatabase();
@@ -49,6 +78,13 @@ export class TestDatabaseManager {
       console.log('✅ Test database ready');
     } catch (error) {
       console.error('❌ Failed to start test database:', error);
+      // Print docker logs for debugging
+      try {
+        console.log('\n📋 Docker Compose Logs:');
+        execSync('docker compose -f compose.test.yml logs', { stdio: 'inherit', cwd: process.cwd() });
+      } catch (e) {
+        console.error('Could not retrieve logs');
+      }
       throw error;
     }
   }
