@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { createConnection } from 'ioredis';
 
 /**
  * Test Database Manager
@@ -35,6 +36,9 @@ export class TestDatabaseManager {
 
       // Wait for database to be ready
       await this.waitForDatabase();
+      
+      // Wait for redis to be ready
+      await this.waitForRedis();
       
       // Run migrations on test database
       await this.runMigrations();
@@ -140,6 +144,40 @@ export class TestDatabaseManager {
     }
 
     throw new Error('❌ Database failed to start within timeout');
+  }
+
+  private async waitForRedis(maxRetries = 30): Promise<void> {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const redis = createConnection({
+          host: 'localhost',
+          port: 6379,
+          password: 'test_redis_password',
+          retryStrategy: () => null,
+          maxRetriesPerRequest: 1,
+          enableReadyCheck: false,
+          connectTimeout: 5000,
+        });
+
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
+          redis.ping((err) => {
+            clearTimeout(timeout);
+            redis.disconnect();
+            if (err) reject(err);
+            else resolve(null);
+          });
+        });
+        
+        console.log('✅ Redis connection successful');
+        return;
+      } catch (error) {
+        console.log(`⏳ Waiting for Redis... (${i + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    throw new Error('❌ Redis failed to start within timeout');
   }
 
   /**
