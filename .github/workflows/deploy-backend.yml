@@ -40,15 +40,14 @@ jobs:
         run: pnpm run build
       # Remove 'Start Services' and 'Start Test Database' steps
       # They are redundant and conflict with your TestDatabaseManager class.
-      - name: Run all tests
+      - name: Run unit tests
         env:
-          NODE_ENV: test
-          # Force the app to look at localhost, where the Docker ports are mapped
-          DB_HOST: localhost
-          DB_PORT: 5433
           REDIS_HOST: localhost
           REDIS_PORT: 6379
-        run: pnpm test      
+          REDIS_PASSWORD: test_redis_password
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5433
+        run: pnpm test --silent        
         #- name: Run unit tests
         #run: pnpm test --silent
 
