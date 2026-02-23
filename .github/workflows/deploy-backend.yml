@@ -1,0 +1,91 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # pnpm isn't included by default; install before using it.
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      # cache pnpm store manually to avoid requiring pnpm during setup-node
+      - name: Cache pnpm store
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.OS }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.OS }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build backend
+        run: pnpm run build
+
+      - name: Run tests
+        run: pnpm test --silent
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: |
+            dist
+            assets
+            package.json
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: build-output
+
+      - name: Deploy to VM
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.VM_IP }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_PRIVATE_KEY }}
+          port: 22
+          script: |
+            set -e
+            mkdir -p ~/mes-backend
+            # sync artifact contents, preserving .env where present
+            rsync -av --delete --exclude ".env" build-output/dist/ ~/mes-backend/dist/
+            rsync -av --delete --exclude ".env" build-output/assets/ ~/mes-backend/assets/
+            rsync -av --delete --exclude "node_modules" build-output/package.json ~/mes-backend/package.json
+            cd ~/mes-backend
+            npm install --production --omit=dev
+            if command -v pm2 >/dev/null 2>&1; then
+              pm2 restart mes-backend || pm2 start dist/main.js --name mes-backend --env production
+            else
+              sudo systemctl restart mes-backend.service || true
+            fi
+
+      - name: Notify deployment result
+        run: echo "Deployment finished"
