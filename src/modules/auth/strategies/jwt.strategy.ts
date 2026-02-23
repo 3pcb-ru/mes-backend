@@ -1,10 +1,10 @@
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { PassportStrategy } from '@nestjs/passport';
 import { ForbiddenException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 
-import { RedisService } from '@/app/services/redis/redis.service';
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
+import { RedisService } from '@/app/services/redis/redis.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -21,7 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         this.logger.setContext(JwtStrategy.name);
     }
 
-    async validate(payload: { sub: string; email: string; firstName: string; lastName: string; roleId: string }) {
+    async validate(payload: { sub: string; email: string; firstName: string; lastName: string; roleId: string; factoryId?: string }) {
         if (!payload || !payload.sub) {
             this.logger.warn('Invalid JWT payload', payload);
             throw new UnauthorizedException('Invalid token');
@@ -51,6 +51,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
                 lastName: payload.lastName,
                 roleId,
                 permissions,
+                factoryId: payload.factoryId,
             };
         } catch (error) {
             this.logger.error('JWT validation failed:', error);

@@ -1,23 +1,32 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { eq } from 'drizzle-orm';
+
+import { DrizzleService } from '@/models/model.service';
+import { product } from '@/models/schema/product.schema';
 
 import { CreateProductDto } from './dto/create-product.dto';
 
 @Injectable()
 export class ProductService {
-    private products: Array<CreateProductDto & { id: string }> = [];
+    constructor(private readonly drizzleService: DrizzleService) {}
 
     async list() {
-        return { data: this.products };
+        const data = await this.drizzleService.database.query.product.findMany();
+        return { data };
     }
 
-    async create(payload: CreateProductDto) {
-        const p = { id: `${Date.now()}`, ...payload };
-        this.products.push(p);
+    async create(payload: CreateProductDto, factoryId: string) {
+        const [p] = await this.drizzleService.database
+            .insert(product)
+            .values({ ...payload, factoryId })
+            .returning();
         return p;
     }
 
     async findOne(id: string) {
-        const p = this.products.find((x) => x.id === id);
+        const p = await this.drizzleService.database.query.product.findFirst({
+            where: eq(product.id, id),
+        });
         if (!p) throw new NotFoundException('Product not found');
         return p;
     }
