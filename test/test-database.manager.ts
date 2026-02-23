@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { createConnection } from 'ioredis';
+import Redis from 'ioredis';
 
 /**
  * Test Database Manager
@@ -149,7 +149,7 @@ export class TestDatabaseManager {
   private async waitForRedis(maxRetries = 30): Promise<void> {
     for (let i = 0; i < maxRetries; i++) {
       try {
-        const redis = createConnection({
+        const redis = new Redis({
           host: 'localhost',
           port: 6379,
           password: 'test_redis_password',
@@ -161,7 +161,7 @@ export class TestDatabaseManager {
 
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
-          redis.ping((err) => {
+          redis.ping((err: any) => {
             clearTimeout(timeout);
             redis.disconnect();
             if (err) reject(err);
