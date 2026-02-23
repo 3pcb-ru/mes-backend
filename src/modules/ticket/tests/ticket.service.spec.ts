@@ -1,9 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { FilterService } from '@/common/services/filter.service';
-import { DrizzleService } from '@/models/model.service';
+
+import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { MailService } from '@/app/services/mail/mail.service';
-import { TicketService } from '../ticket.service';
+import { StorageService } from '@/app/services/storage/storage.service';
+import { FilterService } from '@/common/services/filter.service';
+import { RecaptchaService } from '@/common/services/recaptcha.service';
+import { DrizzleService } from '@/models/model.service';
+import { AttachmentService } from '@/modules/attachments/attachment.service';
 import { UsersService } from '@/modules/users/users.service';
+
+import { TicketService } from '../ticket.service';
 
 describe('TicketService Filtering', () => {
     let service: TicketService;
@@ -48,6 +54,10 @@ describe('TicketService Filtering', () => {
                     provide: UsersService,
                     useValue: mockUsersService,
                 },
+                { provide: RecaptchaService, useValue: {} },
+                { provide: CustomLoggerService, useValue: { log: jest.fn(), error: jest.fn(), debug: jest.fn(), setContext: jest.fn() } },
+                { provide: AttachmentService, useValue: {} },
+                { provide: StorageService, useValue: {} },
             ],
         }).compile();
 

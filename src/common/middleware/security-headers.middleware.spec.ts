@@ -1,6 +1,7 @@
-import { SecurityHeadersMiddleware } from './security-headers.middleware';
-import { Request, Response, NextFunction } from 'express';
 import { Test, TestingModule } from '@nestjs/testing';
+import { NextFunction, Request, Response } from 'express';
+
+import { SecurityHeadersMiddleware } from './security-headers.middleware';
 
 // Mock the security config
 jest.mock('@/config/security-headers.config', () => ({
@@ -80,6 +81,7 @@ describe('SecurityHeadersMiddleware', () => {
     let mockNext: NextFunction;
 
     beforeEach(async () => {
+        process.env.CSP_REPORT_ONLY = 'false';
         const module: TestingModule = await Test.createTestingModule({
             providers: [SecurityHeadersMiddleware],
         }).compile();

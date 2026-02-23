@@ -1,7 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ExecutionContext } from '@nestjs/common';
-import { RateLimitGuard } from './rate-limit.guard';
+import { Test, TestingModule } from '@nestjs/testing';
+
 import { RedisService } from '@/app/services/redis/redis.service';
+
+import { RateLimitGuard } from './rate-limit.guard';
 
 describe('RateLimitGuard Security Tests', () => {
     let guard: RateLimitGuard;
@@ -12,6 +14,7 @@ describe('RateLimitGuard Security Tests', () => {
         expire: jest.fn(),
         get: jest.fn(),
         set: jest.fn(),
+        ttl: jest.fn().mockResolvedValue(60),
     };
 
     beforeEach(async () => {
@@ -134,7 +137,7 @@ describe('RateLimitGuard Security Tests', () => {
                 connection: { remoteAddress: '192.168.1.1' },
             });
 
-            mockRedisService.incr.mockResolvedValue(4); // Over limit of 3
+            mockRedisService.incr.mockResolvedValue(11); // Over limit of 10
 
             await expect(guard.canActivate(mockContext)).rejects.toThrow();
         });
@@ -189,7 +192,7 @@ describe('RateLimitGuard Security Tests', () => {
                 connection: { remoteAddress: '192.168.1.1' },
             });
 
-            mockRedisService.incr.mockResolvedValue(4); // Over limit
+            mockRedisService.incr.mockResolvedValue(11); // Over limit of 10
 
             await expect(guard.canActivate(mockContext)).rejects.toThrow();
         });
