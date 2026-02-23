@@ -32,9 +32,6 @@ const config: Config = {
     // Coverage
     collectCoverageFrom: ['src/**/*.{ts,js}', '!src/**/*.spec.ts', '!src/**/*.test.ts', '!src/**/*.d.ts', '!src/main.ts'],
 
-    // Environment variables for test database
-    setupFiles: ['<rootDir>/test/jest-integration.env.ts'],
-
     // Run tests serially to avoid database conflicts
     maxWorkers: 1,
 
