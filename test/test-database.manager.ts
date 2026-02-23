@@ -97,20 +97,34 @@ export class TestDatabaseManager {
     
     try {
       if (this.pool) {
-        await this.pool.end();
+        console.log('📊 Closing database pool...');
+        try {
+          await this.pool.end();
+        } catch (err) {
+          console.warn('Warning: Error while closing pool:', (err as any).message);
+        }
         this.pool = null;
+        
+        // Give connections time to fully close
+        console.log('⏳ Waiting for connections to close...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
       // Stop and remove the test database container
-      execSync('docker compose -f compose.test.yml down -v', {
-        stdio: 'pipe',
-        cwd: process.cwd(),
-      });
+      console.log('🛑 Stopping Docker containers...');
+      try {
+        execSync('docker compose -f compose.test.yml down -v', {
+          stdio: 'pipe',
+          cwd: process.cwd(),
+        });
+      } catch (err) {
+        console.warn('Warning: Error stopping containers:', (err as any).message);
+      }
 
       console.log('✅ Test database cleanup complete');
     } catch (error) {
       console.error('❌ Failed to cleanup test database:', error);
-      throw error;
+      // Don't re-throw here - it would prevent other cleanup from happening
     }
   }
 
@@ -125,6 +139,10 @@ export class TestDatabaseManager {
         user: 'test_user',
         password: 'test_password',
         database: 'mes_test',
+        // Connection timeout settings to prevent hanging
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 10000,
+        max: 10, // Limit connections
       });
     }
 
@@ -157,25 +175,32 @@ export class TestDatabaseManager {
    */
   private async waitForDatabase(maxRetries = 30): Promise<void> {
     for (let i = 0; i < maxRetries; i++) {
+      let pool: Pool | null = null;
       try {
-        const pool = new Pool({
+        pool = new Pool({
           host: 'localhost',
           port: 5433,
           user: 'test_user',
           password: 'test_password',
           database: 'mes_test',
+          connectionTimeoutMillis: 5000,
         });
 
         const client = await pool.connect();
         await client.query('SELECT 1');
         client.release();
-        await pool.end();
         
         console.log('✅ Database connection successful');
         return;
       } catch (error) {
         console.log(`⏳ Waiting for database... (${i + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, 1000));
+      } finally {
+        if (pool) {
+          await pool.end().catch(() => {
+            // Ignore errors during cleanup
+          });
+        }
       }
     }
 
@@ -184,30 +209,32 @@ export class TestDatabaseManager {
 
   private async waitForRedis(maxRetries = 30): Promise<void> {
     for (let i = 0; i < maxRetries; i++) {
-      try {
-        const redis = new Redis({
-          host: 'localhost',
-          port: 6379,
-          password: 'test_redis_password',
-          retryStrategy: () => null,
-          maxRetriesPerRequest: 1,
-          enableReadyCheck: false,
-          connectTimeout: 5000,
-        });
+      const redis = new Redis({
+        host: 'localhost',
+        port: 6379,
+        password: 'test_redis_password',
+        retryStrategy: () => null,
+        maxRetriesPerRequest: 1,
+        enableReadyCheck: false,
+        connectTimeout: 5000,
+      });
 
+      try {
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(() => reject(new Error('Timeout')), 5000);
           redis.ping((err: any) => {
             clearTimeout(timeout);
-            redis.disconnect();
             if (err) reject(err);
             else resolve(null);
           });
         });
         
+        // Close the connection properly
+        redis.quit();
         console.log('✅ Redis connection successful');
         return;
       } catch (error) {
+        redis.disconnect();
         console.log(`⏳ Waiting for Redis... (${i + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
@@ -220,16 +247,20 @@ export class TestDatabaseManager {
    * Run database migrations
    */
   private async runMigrations(): Promise<void> {
+    let migrationPool: Pool | null = null;
     try {
       console.log('🔄 Running database migrations...');
       
       // Create a Drizzle database connection for migrations
-      const migrationPool = new Pool({
+      migrationPool = new Pool({
         host: 'localhost',
         port: 5433,
         user: 'test_user',
         password: 'test_password',
         database: 'mes_test',
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 10000,
+        max: 10,
       });
 
       const db = drizzle(migrationPool);
@@ -241,12 +272,17 @@ export class TestDatabaseManager {
         migrationsSchema: 'public',
       });
 
-      await migrationPool.end();
       console.log('✅ Migrations completed');
     } catch (error: any) {
       console.error('❌ Migration failed:', error);
       console.error('Error details:', error.toString());
       throw error;
+    } finally {
+      if (migrationPool) {
+        await migrationPool.end().catch((err) => {
+          console.warn('Warning: Error closing migration pool:', err.message);
+        });
+      }
     }
   }
 
@@ -264,6 +300,10 @@ export class TestDatabaseManager {
           user: 'test_user',
           password: 'test_password',
           database: 'mes_test',
+          // Connection timeout settings to prevent hanging
+          connectionTimeoutMillis: 10000,
+          idleTimeoutMillis: 10000,
+          max: 10, // Limit connections
         });
       }
 
