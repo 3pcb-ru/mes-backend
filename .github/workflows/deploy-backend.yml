@@ -38,18 +38,18 @@ jobs:
 
       - name: Build backend
         run: pnpm run build
-      - name: Start Services for Integration Tests
-        run: docker compose -f compose.test.yml up -d
-
-      # Run tests in parallel with the build to speed up the workflow
-      - name: Start Test Database
-        run: docker compose -f compose.test.yml up -d
-    
-      - name: Wait for Database to be Ready
-        run: sleep 10 # Or use a wait-for-it script
-
-      - name: Run unit tests
-        run: pnpm test --silent
+      # Remove 'Start Services' and 'Start Test Database' steps
+      # They are redundant and conflict with your TestDatabaseManager class.
+      - name: Run all tests
+        env:
+          NODE_ENV: test
+          # Force the app to look at localhost, where the Docker ports are mapped
+          DB_HOST: localhost
+          DB_PORT: 5433
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+        run: pnpm test      - name: Run unit tests
+        #run: pnpm test --silent
 
       - name: Run integration tests
         run: pnpm test:integration --forceExit
