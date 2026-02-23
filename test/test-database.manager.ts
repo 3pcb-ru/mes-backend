@@ -24,11 +24,11 @@ export class TestDatabaseManager {
    * Start the test database container
    */
   async startTestDatabase(): Promise<void> {
-    console.log('🐳 Starting test PostgreSQL container...');
+    console.log('🐳 Starting test PostgreSQL and Redis containers...');
     
     try {
-      // Start the test database using docker-compose
-      execSync('docker compose -f compose.test.yml up -d test_postgres', {
+      // Start both test database and redis using docker-compose
+      execSync('docker compose -f compose.test.yml up -d test_postgres test_redis', {
         stdio: 'pipe',
         cwd: process.cwd(),
       });

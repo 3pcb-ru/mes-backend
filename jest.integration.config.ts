@@ -7,7 +7,7 @@ const config: Config = {
     testEnvironment: 'node',
 
     // Test file patterns
-    testMatch: ['<rootDir>/src/**/*.integration.spec.ts'],
+    testMatch: ['<rootDir>/test/integration/**/*.spec.ts'],
 
     // Module resolution
     moduleNameMapper: pathsToModuleNameMapper(
