@@ -80,46 +80,52 @@ jobs:
             
             mkdir -p "$DEPLOY_DIR"
             
-            # Identify source directory
             if [ -d "$TEMP_DIR/build-output" ]; then
               SOURCE_DIR="$TEMP_DIR/build-output"
             else
               SOURCE_DIR="$TEMP_DIR"
             fi
             
-            echo "Moving files to deployment directory..."
-            # Using -T to ensure directory contents are merged correctly
+            echo "📦 Moving artifacts to deployment directory..."
             cp -r "$SOURCE_DIR/dist" "$DEPLOY_DIR/"
             cp -r "$SOURCE_DIR/assets" "$DEPLOY_DIR/"
             cp -r "$SOURCE_DIR/drizzle" "$DEPLOY_DIR/"
             cp "$SOURCE_DIR/package.json" "$DEPLOY_DIR/"
             cp "$SOURCE_DIR/pnpm-lock.yaml" "$DEPLOY_DIR/"
-            cp "$SOURCE_DIR/pnpm-workspace.yaml" "$DEPLOY_DIR/" 2>/dev/null || true
             cp "$SOURCE_DIR/Containerfile.prod" "$DEPLOY_DIR/Dockerfile"
             cp "$SOURCE_DIR/compose.prod.yml" "$DEPLOY_DIR/docker-compose.yml"
             
             rm -rf "$TEMP_DIR"
             
-            if [ ! -f "$DEPLOY_DIR/.env" ]; then
-              touch "$DEPLOY_DIR/.env"
-            fi
-            
             cd "$DEPLOY_DIR"
-            
-            # Setup Docker Command
+
+            # --- 1. GENERATE .ENV FILE ---
+            # This fixes the "variable not set" warnings and "invalid reference format" error
+            echo "📝 Generating .env file..."
+            cat <<EOF > .env
+            NODE_ENV=production
+            CI_REGISTRY_IMAGE=mes-backend
+            CI_COMMIT_SHA=latest
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            EOF
+            # --- 2. BUILD IMAGE ---
             if command -v docker >/dev/null 2>&1; then DOCKER_CMD="docker"; else DOCKER_CMD="podman"; fi
             
-            echo "Pruning old build cache..."
-            $DOCKER_CMD builder prune -f
-            
-            echo "Building image (skipping internal build)..."
+            echo "🔨 Building Docker image..."
             $DOCKER_CMD build -f Dockerfile -t mes-backend:latest .
             
-            # Setup Compose Command
-            if command -v docker-compose >/dev/null 2>&1; then COMPOSE_CMD="docker-compose"; else COMPOSE_CMD="podman-compose"; fi
+            # --- 3. DOCKER COMPOSE ---
+            if command -v docker-compose >/dev/null 2>&1; then
+              COMPOSE_CMD="docker-compose"
+            else
+              COMPOSE_CMD="docker compose"
+            fi
             
-            echo "Restarting services..."
+            echo "🚀 Restarting containers with $COMPOSE_CMD..."
             $COMPOSE_CMD down || true
             $COMPOSE_CMD up -d
             
-            echo "Deployment complete!"
+            echo "✅ Deployment successful!"
