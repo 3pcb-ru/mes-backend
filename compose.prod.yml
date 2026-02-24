@@ -39,7 +39,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-      # API now waits for the setup script to finish creating the bucket
       minio-setup:
         condition: service_completed_successfully
     restart: unless-stopped
@@ -98,9 +97,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # THE NEW SETUP CONTAINER
-minio-setup:
-    # Use an alpine image that has a shell, download the mc client, and run it.
+  minio-setup:
     image: alpine:latest
     container_name: mes-backend-minio-setup
     networks:
@@ -112,7 +109,6 @@ minio-setup:
     depends_on:
       minio:
         condition: service_healthy
-    # Download the client, set the alias, and make the bucket
     command: >
       /bin/sh -c "
       apk add --no-cache curl &&
