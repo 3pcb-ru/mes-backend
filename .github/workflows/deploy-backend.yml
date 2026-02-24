@@ -86,7 +86,7 @@ jobs:
               SOURCE_DIR="$TEMP_DIR"
             fi
             
-            echo "📦 Moving artifacts to deployment directory..."
+            echo "📦 Moving artifacts..."
             cp -r "$SOURCE_DIR/dist" "$DEPLOY_DIR/"
             cp -r "$SOURCE_DIR/assets" "$DEPLOY_DIR/"
             cp -r "$SOURCE_DIR/drizzle" "$DEPLOY_DIR/"
@@ -99,8 +99,6 @@ jobs:
             
             cd "$DEPLOY_DIR"
 
-            # --- 1. GENERATE .ENV FILE ---
-            # This fixes the "variable not set" warnings and "invalid reference format" error
             echo "📝 Generating .env file..."
             cat <<EOF > .env
             NODE_ENV=production
@@ -111,21 +109,24 @@ jobs:
             POSTGRES_DB=${{ secrets.POSTGRES_DB }}
             REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
             EOF
-            # --- 2. BUILD IMAGE ---
+
             if command -v docker >/dev/null 2>&1; then DOCKER_CMD="docker"; else DOCKER_CMD="podman"; fi
             
             echo "🔨 Building Docker image..."
             $DOCKER_CMD build -f Dockerfile -t mes-backend:latest .
             
-            # --- 3. DOCKER COMPOSE ---
             if command -v docker-compose >/dev/null 2>&1; then
               COMPOSE_CMD="docker-compose"
             else
               COMPOSE_CMD="docker compose"
             fi
             
-            echo "🚀 Restarting containers with $COMPOSE_CMD..."
-            $COMPOSE_CMD down || true
-            $COMPOSE_CMD up -d
+            echo "🚀 Restarting containers with clean volumes..."
+            # -v is critical here to wipe the 'uninitialized' db that caused the previous crash
+            $COMPOSE_CMD down -v || true
             
-            echo "✅ Deployment successful!"
+            # Explicitly pass the env file to ensure all secrets are loaded
+            $COMPOSE_CMD --env-file .env up -d
+            
+            echo "✅ Deployment successful! Containers are starting."
+            docker ps
