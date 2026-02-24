@@ -2,13 +2,31 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 
+import { CustomLoggerService } from '@/app/services/logger/logger.service';
+import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { FacilityModule } from '@/modules/facility/facility.module';
 
 describe('FacilityController (integration)', () => {
     let app: INestApplication;
 
     beforeAll(async () => {
-    const mod = await Test.createTestingModule({ imports: [FacilityModule] }).compile();
+        const mod = await Test.createTestingModule({
+            imports: [FacilityModule],
+            providers: [
+                {
+                    provide: CustomLoggerService,
+                    useValue: {
+                        log: jest.fn(),
+                        error: jest.fn(),
+                        warn: jest.fn(),
+                        setContext: jest.fn(),
+                    },
+                },
+            ],
+        })
+            .overrideGuard(JwtAuthGuard)
+            .useValue({ canActivate: () => true })
+            .compile();
         app = mod.createNestApplication();
         app.setGlobalPrefix('api');
         await app.init();

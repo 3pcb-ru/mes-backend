@@ -18,6 +18,13 @@ const mockDrizzleService = {
                 returning: jest.fn().mockResolvedValue([{ id: 'mock-id' }]),
             }),
         }),
+        update: jest.fn().mockReturnValue({
+            set: jest.fn().mockReturnValue({
+                where: jest.fn().mockReturnValue({
+                    returning: jest.fn().mockResolvedValue([{ id: 'mock-id', name: 'P2', sku: 'SKU-2' }]),
+                }),
+            }),
+        }),
     },
 };
 
