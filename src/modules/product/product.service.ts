@@ -30,4 +30,10 @@ export class ProductService {
         if (!p) throw new NotFoundException('Product not found');
         return p;
     }
+
+    async update(id: string, payload: CreateProductDto) {
+        const [p] = await this.drizzleService.database.update(product).set(payload).where(eq(product.id, id)).returning();
+        if (!p) throw new NotFoundException('Product not found');
+        return p;
+    }
 }

@@ -57,4 +57,12 @@ describe('ProductController (integration)', () => {
         const getRes = await request(app.getHttpServer()).get(`/api/products/${id}`).expect(200);
         expect(getRes.body._data.id).toBe('mock-id');
     });
+
+    it('/api/products (PUT)', async () => {
+        const updateRes = await request(app.getHttpServer()).put('/api/products/mock-id').send({ name: 'P2', sku: 'SKU-2' }).expect(200);
+        expect(updateRes.body).toHaveProperty('_data');
+        expect(updateRes.body._data.id).toBe('mock-id');
+        expect(updateRes.body._data.name).toBe('P2');
+        expect(updateRes.body._data.sku).toBe('SKU-2');
+    });
 });
