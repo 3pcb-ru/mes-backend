@@ -91,7 +91,6 @@ jobs:
 
             # ----------------------------------------------------------------------
             # THE BULLETPROOF FALLBACK METHOD
-            # If the GitHub secret is empty, it falls back to the hardcoded value.
             # ----------------------------------------------------------------------
             export NODE_ENV=production
             export CI_REGISTRY_IMAGE=mes-backend
@@ -108,6 +107,26 @@ jobs:
             
             REDIS_SEC="${{ secrets.REDIS_PASSWORD }}"
             export REDIS_PASSWORD="${REDIS_SEC:-mes_fallback_redis_pass_123}"
+            
+            # --- MINIO FALLBACKS ---
+            M_ACCESS="${{ secrets.MINIO_ACCESS_KEY }}"
+            export MINIO_ACCESS_KEY="${M_ACCESS:-mes_minio_admin_123}"
+            
+            M_SECRET="${{ secrets.MINIO_SECRET_KEY }}"
+            export MINIO_SECRET_KEY="${M_SECRET:-mes_minio_secret_123}"
+
+            M_BUCKET="${{ secrets.MINIO_BUCKET_NAME }}"
+            export MINIO_BUCKET_NAME="${M_BUCKET:-mes-default-bucket}"
+
+            # --- SERVER & JWT FALLBACKS ---
+            S_HOST="${{ secrets.SERVER_HOST }}"
+            export SERVER_HOST="${S_HOST:-localhost}"
+
+            S_PROTO="${{ secrets.SERVER_PROTOCOL }}"
+            export SERVER_PROTOCOL="${S_PROTO:-http}"
+
+            J_SEC="${{ secrets.JWT_SECRET }}"
+            export JWT_SECRET="${J_SEC:-mes_super_secret_jwt_key_123}"
             # ----------------------------------------------------------------------
 
             if command -v docker >/dev/null 2>&1; then DOCKER_CMD="docker"; else DOCKER_CMD="podman"; fi
@@ -120,7 +139,6 @@ jobs:
             $COMPOSE_CMD down -v || true
             
             echo "🚀 Starting containers directly with exported shell variables..."
-            # Notice we are NOT using --env-file here. Compose will read the exports above!
             if ! $COMPOSE_CMD up -d; then
                 echo "❌ Deployment failed! Postgres logs:"
                 $DOCKER_CMD logs mes-backend-postgres-1 || true
