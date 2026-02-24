@@ -9,6 +9,11 @@ services:
     networks:
       - mes-network
     environment:
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_USE_SSL=false
       - NODE_ENV=${NODE_ENV}
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
@@ -81,3 +86,4 @@ minio:
 volumes:
   redis_data:
   postgres_data:
+  minio_data:
