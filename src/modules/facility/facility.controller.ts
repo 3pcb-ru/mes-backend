@@ -1,11 +1,16 @@
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { ok } from '@/utils';
 
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateFacilityDto } from './dto/create-facility.dto';
 import { UpdateFacilityDto } from './dto/update-facility.dto';
 import { FacilityService } from './facility.service';
 
+@ApiTags('Facilities')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('facilities')
 export class FacilityController {
     constructor(private readonly facilityService: FacilityService) {}
