@@ -98,19 +98,19 @@ jobs:
             
             rm -rf "$TEMP_DIR"
             
-cd "$DEPLOY_DIR"
+            cd "$DEPLOY_DIR"
 
             echo "📝 Generating .env file..."
             # DO NOT indent the lines between cat <<EOF and EOF!
             cat <<EOF > .env
-NODE_ENV=production
-CI_REGISTRY_IMAGE=mes-backend
-CI_COMMIT_SHA=latest
-POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
-EOF
+            NODE_ENV=production
+            CI_REGISTRY_IMAGE=mes-backend
+            CI_COMMIT_SHA=latest
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+            EOF
 
             if command -v docker >/dev/null 2>&1; then DOCKER_CMD="docker"; else DOCKER_CMD="podman"; fi            
             echo "🔨 Building Docker image..."
