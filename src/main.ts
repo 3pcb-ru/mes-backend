@@ -80,9 +80,11 @@ async function bootstrap() {
         }
 
         const origins = [clientUrl];
-        if (configuration.environment === ENVIRONMENT.DEVELOPMENT) {
+        if (configuration.environment !== ENVIRONMENT.PRODUCTION) {
             origins.push(`http://${host}:${port}`);
             origins.push(`https://${host}:${port}`);
+            origins.push('http://localhost:4000');
+            origins.push('https://localhost:4000');
         }
         // Ensure both http and https versions of the actual clientUrl are also allowed
         if (clientUrl.startsWith('http:')) {
@@ -92,7 +94,14 @@ async function bootstrap() {
         }
 
         app.enableCors({
-            origin: [...new Set(origins)],
+            origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+                const uniqueOrigins = [...new Set(origins)];
+                if (!origin || uniqueOrigins.includes(origin) || configuration.environment !== ENVIRONMENT.PRODUCTION) {
+                    callback(null, true);
+                } else {
+                    callback(new Error('Not allowed by CORS'));
+                }
+            },
             methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
             credentials: true,
             allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
