@@ -2,6 +2,11 @@ networks:
   mes-network:
     driver: bridge
 
+volumes:
+  redis_data:
+  postgres_data:
+  minio_data:
+
 services:
   api:
     image: '${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHA}'
@@ -9,11 +14,6 @@ services:
     networks:
       - mes-network
     environment:
-      - MINIO_ENDPOINT=minio
-      - MINIO_PORT=9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - MINIO_USE_SSL=false
       - NODE_ENV=${NODE_ENV}
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
@@ -23,10 +23,18 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # MINIO VARS ADDED HERE
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_USE_SSL=false
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -39,7 +47,6 @@ services:
     image: postgres:15-alpine
     networks:
       - mes-network
-    # EXPLICITLY pass the variables to Postgres
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -66,24 +73,21 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-minio:
+
+  minio:
     image: minio/minio:latest
     container_name: mes-backend-minio-1
     restart: unless-stopped
     command: server /data --console-address ":9001"
+    networks:
+      - mes-network
     environment:
       - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
       - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
     volumes:
       - minio_data:/data
-    networks:
-      - mes-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
       timeout: 5s
       retries: 5
-volumes:
-  redis_data:
-  postgres_data:
-  minio_data:
