@@ -7,7 +7,7 @@ const config: Config = {
     testEnvironment: 'node',
 
     // Test file patterns
-    testMatch: ['<rootDir>/src/**/*.integration.spec.ts'],
+    testMatch: ['<rootDir>/test/integration/**/*.spec.ts'],
 
     // Module resolution
     moduleNameMapper: pathsToModuleNameMapper(
@@ -31,9 +31,6 @@ const config: Config = {
 
     // Coverage
     collectCoverageFrom: ['src/**/*.{ts,js}', '!src/**/*.spec.ts', '!src/**/*.test.ts', '!src/**/*.d.ts', '!src/main.ts'],
-
-    // Environment variables for test database
-    setupFiles: ['<rootDir>/test/jest-integration.env.ts'],
 
     // Run tests serially to avoid database conflicts
     maxWorkers: 1,

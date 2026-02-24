@@ -14,3 +14,8 @@ process.env.TEST_DB_PORT = '5433';
 process.env.TEST_DB_USERNAME = 'test_user';
 process.env.TEST_DB_PASSWORD = 'test_password';
 process.env.TEST_DB_NAME = 'mes_test';
+
+// Redis settings for tests
+process.env.REDIS_HOST = 'localhost';
+process.env.REDIS_PORT = '6379';
+process.env.REDIS_PASSWORD = 'test_redis_password';

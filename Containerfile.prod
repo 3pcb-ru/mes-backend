@@ -1,27 +1,31 @@
-FROM node:23-alpine AS build
-WORKDIR /app
+# Use a stable, light image
+FROM node:22-alpine3.21
 
-# Install PostgreSQL client for migrations during build
-RUN apk add --no-cache postgresql-client && \
-    rm -rf /var/cache/apk/*
-
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN npm install -g pnpm @nestjs/cli && \
-    pnpm install --frozen-lockfile
-COPY . .
-RUN pnpm build
-
-FROM node:23-alpine AS prod
+# Set production environment
 ENV NODE_ENV=production
 WORKDIR /app
 
+# 1. Install system dependencies & pnpm
+RUN apk update && apk add --no-cache postgresql17-client && \
+    npm install -g pnpm drizzle-kit && \
+    rm -rf /var/cache/apk/*
+
+# 2. Copy dependency files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN npm install -g pnpm drizzle-kit && \
-    HUSKY=0 pnpm install --prod --frozen-lockfile && \
+
+# 3. Install production-only dependencies
+# HUSKY=0 avoids running git hooks inside the container
+RUN HUSKY=0 pnpm install --prod --frozen-lockfile && \
     pnpm store prune && \
     npm cache clean --force
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/drizzle ./drizzle
+
+# 4. Copy the PRE-BUILT files from your CI/CD pipeline
+# This is why we don't need "RUN pnpm build" here
+COPY dist ./dist
+COPY drizzle ./drizzle
+COPY assets ./assets
 
 EXPOSE 4001
+
+# 5. Start the app (Ensure this path matches your dist output)
 CMD ["node", "dist/main"]

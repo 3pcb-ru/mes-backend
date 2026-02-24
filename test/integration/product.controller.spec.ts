@@ -4,7 +4,8 @@ import request from 'supertest';
 
 import { DrizzleService } from '@/models/model.service';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
-import { ProductModule } from '@/modules/product/product.module';
+import { ProductController } from '@/modules/product/product.controller';
+import { ProductService } from '@/modules/product/product.service';
 
 const mockDrizzleService = {
     database: {
@@ -32,7 +33,10 @@ describe('ProductController (integration)', () => {
     let app: INestApplication;
 
     beforeAll(async () => {
-        const mod = await Test.createTestingModule({ imports: [ProductModule] })
+        const mod = await Test.createTestingModule({
+            controllers: [ProductController],
+            providers: [ProductService, { provide: DrizzleService, useValue: mockDrizzleService }],
+        })
             .overrideGuard(JwtAuthGuard)
             .useValue({
                 canActivate: (context: any) => {
@@ -41,8 +45,6 @@ describe('ProductController (integration)', () => {
                     return true;
                 },
             })
-            .overrideProvider(DrizzleService)
-            .useValue(mockDrizzleService)
             .compile();
         app = mod.createNestApplication();
         app.setGlobalPrefix('api');

@@ -1,13 +1,17 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
-import { ExecutionModule } from '@/modules/execution/execution.module';
+import { ExecutionController } from '@/modules/execution/execution.controller';
+import { ExecutionService } from '@/modules/execution/execution.service';
 
 describe('ExecutionController (integration)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-  const mod = await Test.createTestingModule({ imports: [ExecutionModule] }).compile();
+  const mod = await Test.createTestingModule({
+    controllers: [ExecutionController],
+    providers: [ExecutionService],
+  }).compile();
     app = mod.createNestApplication();
     app.setGlobalPrefix('api');
     await app.init();
