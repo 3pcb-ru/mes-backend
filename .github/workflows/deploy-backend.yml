@@ -36,6 +36,7 @@ jobs:
           path: |
             dist
             assets
+            drizzle
             package.json
             pnpm-lock.yaml
             pnpm-workspace.yaml
@@ -90,6 +91,7 @@ jobs:
             # Using -T to ensure directory contents are merged correctly
             cp -r "$SOURCE_DIR/dist" "$DEPLOY_DIR/"
             cp -r "$SOURCE_DIR/assets" "$DEPLOY_DIR/"
+            cp -r "$SOURCE_DIR/drizzle" "$DEPLOY_DIR/"
             cp "$SOURCE_DIR/package.json" "$DEPLOY_DIR/"
             cp "$SOURCE_DIR/pnpm-lock.yaml" "$DEPLOY_DIR/"
             cp "$SOURCE_DIR/pnpm-workspace.yaml" "$DEPLOY_DIR/" 2>/dev/null || true
