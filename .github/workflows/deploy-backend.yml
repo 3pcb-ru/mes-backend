@@ -88,10 +88,11 @@ jobs:
             
             echo "📦 Moving artifacts..."
             cp -r "$SOURCE_DIR/dist" "$DEPLOY_DIR/"
-            cp -r "$SOURCE_DIR/assets" "$DEPLOY_DIR/"
-            cp -r "$SOURCE_DIR/drizzle" "$DEPLOY_DIR/"
+            cp -r "$SOURCE_DIR/assets" "$DEPLOY_DIR/" 2>/dev/null || true
+            cp -r "$SOURCE_DIR/drizzle" "$DEPLOY_DIR/" 2>/dev/null || true
             cp "$SOURCE_DIR/package.json" "$DEPLOY_DIR/"
             cp "$SOURCE_DIR/pnpm-lock.yaml" "$DEPLOY_DIR/"
+            cp "$SOURCE_DIR/pnpm-workspace.yaml" "$DEPLOY_DIR/" 2>/dev/null || true
             cp "$SOURCE_DIR/Containerfile.prod" "$DEPLOY_DIR/Dockerfile"
             cp "$SOURCE_DIR/compose.prod.yml" "$DEPLOY_DIR/docker-compose.yml"
             
@@ -121,12 +122,16 @@ jobs:
               COMPOSE_CMD="docker compose"
             fi
             
-            echo "🚀 Restarting containers with clean volumes..."
-            # -v is critical here to wipe the 'uninitialized' db that caused the previous crash
+            echo "🧹 Cleaning up old containers and volumes..."
             $COMPOSE_CMD down -v || true
             
-            # Explicitly pass the env file to ensure all secrets are loaded
-            $COMPOSE_CMD --env-file .env up -d
+            echo "🚀 Starting containers..."
+            # If the up command fails, print the postgres logs immediately
+            if ! $COMPOSE_CMD --env-file .env up -d; then
+                echo "❌ Deployment failed during startup! Printing Postgres logs:"
+                $DOCKER_CMD logs mes-backend-postgres-1 || true
+                exit 1
+            fi
             
-            echo "✅ Deployment successful! Containers are starting."
-            docker ps
+            echo "✅ Deployment successful! Containers are running."
+            $DOCKER_CMD ps
