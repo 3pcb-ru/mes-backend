@@ -89,45 +89,18 @@ jobs:
             
             cd "$DEPLOY_DIR"
 
-            # ----------------------------------------------------------------------
-            # THE BULLETPROOF FALLBACK METHOD
-            # ----------------------------------------------------------------------
-            export NODE_ENV=production
+            # --- WRITE THE SECRETS TO .ENV ---
+            echo "📝 Writing production .env file..."
+            cat << 'EOF' > .env
+            ${{ secrets.PRODUCTION_ENV }}
+            EOF
+            
+            # Clean up the padding spaces that cat << EOF adds
+            sed -i 's/^[ \t]*//' .env
+
+            # Provide default vars for Docker Compose itself
             export CI_REGISTRY_IMAGE=mes-backend
             export CI_COMMIT_SHA=latest
-            
-            USER_SEC="${{ secrets.POSTGRES_USER }}"
-            export POSTGRES_USER="${USER_SEC:-admin}"
-            
-            PASS_SEC="${{ secrets.POSTGRES_PASSWORD }}"
-            export POSTGRES_PASSWORD="${PASS_SEC:-mes_fallback_database_pass_123}"
-            
-            DB_SEC="${{ secrets.POSTGRES_DB }}"
-            export POSTGRES_DB="${DB_SEC:-mes_production}"
-            
-            REDIS_SEC="${{ secrets.REDIS_PASSWORD }}"
-            export REDIS_PASSWORD="${REDIS_SEC:-mes_fallback_redis_pass_123}"
-            
-            # --- MINIO FALLBACKS ---
-            M_ACCESS="${{ secrets.MINIO_ACCESS_KEY }}"
-            export MINIO_ACCESS_KEY="${M_ACCESS:-mes_minio_admin_123}"
-            
-            M_SECRET="${{ secrets.MINIO_SECRET_KEY }}"
-            export MINIO_SECRET_KEY="${M_SECRET:-mes_minio_secret_123}"
-
-            M_BUCKET="${{ secrets.MINIO_BUCKET_NAME }}"
-            export MINIO_BUCKET_NAME="${M_BUCKET:-mes-default-bucket}"
-
-            # --- SERVER & JWT FALLBACKS ---
-            S_HOST="${{ secrets.SERVER_HOST }}"
-            export SERVER_HOST="${S_HOST:-localhost}"
-
-            S_PROTO="${{ secrets.SERVER_PROTOCOL }}"
-            export SERVER_PROTOCOL="${S_PROTO:-http}"
-
-            J_SEC="${{ secrets.JWT_SECRET }}"
-            export JWT_SECRET="${J_SEC:-mes_super_secret_jwt_key_123}"
-            # ----------------------------------------------------------------------
 
             if command -v docker >/dev/null 2>&1; then DOCKER_CMD="docker"; else DOCKER_CMD="podman"; fi
             if command -v docker-compose >/dev/null 2>&1; then COMPOSE_CMD="docker-compose"; else COMPOSE_CMD="docker compose"; fi
@@ -138,16 +111,10 @@ jobs:
             echo "🧹 Wiping old broken volumes..."
             $COMPOSE_CMD down -v || true
             
-            echo "🚀 Starting containers directly with exported shell variables..."
+            echo "🚀 Starting containers..."
             if ! $COMPOSE_CMD up -d; then
                 echo "❌ Deployment failed! Let's check the real culprits:"
-                
-                echo "--- MINIO SETUP LOGS ---"
-                $DOCKER_CMD logs mes-backend-minio-setup || true
-                
-                echo "--- API LOGS ---"
                 $DOCKER_CMD logs mes-backend-api-1 || true
-                
                 exit 1
             fi
             
