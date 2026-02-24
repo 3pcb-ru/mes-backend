@@ -99,8 +99,9 @@ services:
       retries: 5
 
   # THE NEW SETUP CONTAINER
-  minio-setup:
-    image: minio/mc:latest
+minio-setup:
+    # Use an alpine image that has a shell, download the mc client, and run it.
+    image: alpine:latest
     container_name: mes-backend-minio-setup
     networks:
       - mes-network
@@ -111,8 +112,12 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    # Download the client, set the alias, and make the bucket
     command: >
       /bin/sh -c "
-      /usr/bin/mc alias set myminio http://minio:9000 $${MINIO_ACCESS_KEY} $${MINIO_SECRET_KEY} &&
-      /usr/bin/mc mb myminio/$${MINIO_BUCKET_NAME} --ignore-existing || true
+      apk add --no-cache curl &&
+      curl -O https://dl.min.io/client/mc/release/linux-amd64/mc &&
+      chmod +x mc &&
+      ./mc alias set myminio http://minio:9000 $${MINIO_ACCESS_KEY} $${MINIO_SECRET_KEY} &&
+      ./mc mb myminio/$${MINIO_BUCKET_NAME} --ignore-existing || true
       "
