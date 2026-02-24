@@ -23,28 +23,11 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm
 
-      - name: Cache pnpm store
-        uses: actions/cache@v3
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.OS }}-pnpm-${hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.OS }}-pnpm-
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build backend
         run: pnpm run build
-
-      # --- RE-ENABLE TESTS HERE ONCE CONFIG IS FIXED ---
-      # - name: Run all tests
-      #   env:
-      #     NODE_ENV: test
-      #     POSTGRES_HOST: localhost
-      #     POSTGRES_PORT: 5433
-      #     ...
-      #   run: pnpm test
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -65,9 +48,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
@@ -99,60 +79,45 @@ jobs:
             
             mkdir -p "$DEPLOY_DIR"
             
+            # Identify source directory
             if [ -d "$TEMP_DIR/build-output" ]; then
               SOURCE_DIR="$TEMP_DIR/build-output"
             else
               SOURCE_DIR="$TEMP_DIR"
             fi
             
-            # --- UPDATED COPY BLOCK ---
-            echo "Copying artifacts to deployment directory..."
-            cp -r "$SOURCE_DIR/dist" "$DEPLOY_DIR/" 2>/dev/null || true
-            cp -r "$SOURCE_DIR/assets" "$DEPLOY_DIR/" 2>/dev/null || true
-            cp "$SOURCE_DIR/package.json" "$DEPLOY_DIR/" 2>/dev/null || true
-            cp "$SOURCE_DIR/pnpm-lock.yaml" "$DEPLOY_DIR/" 2>/dev/null || true
+            echo "Moving files to deployment directory..."
+            # Using -T to ensure directory contents are merged correctly
+            cp -r "$SOURCE_DIR/dist" "$DEPLOY_DIR/"
+            cp -r "$SOURCE_DIR/assets" "$DEPLOY_DIR/"
+            cp "$SOURCE_DIR/package.json" "$DEPLOY_DIR/"
+            cp "$SOURCE_DIR/pnpm-lock.yaml" "$DEPLOY_DIR/"
             cp "$SOURCE_DIR/pnpm-workspace.yaml" "$DEPLOY_DIR/" 2>/dev/null || true
-            cp "$SOURCE_DIR/Containerfile.prod" "$DEPLOY_DIR/Dockerfile" 2>/dev/null || true
-            cp "$SOURCE_DIR/compose.prod.yml" "$DEPLOY_DIR/docker-compose.yml" 2>/dev/null || true
+            cp "$SOURCE_DIR/Containerfile.prod" "$DEPLOY_DIR/Dockerfile"
+            cp "$SOURCE_DIR/compose.prod.yml" "$DEPLOY_DIR/docker-compose.yml"
             
             rm -rf "$TEMP_DIR"
             
             if [ ! -f "$DEPLOY_DIR/.env" ]; then
-              echo "Warning: .env not found. Creating minimal .env..."
               touch "$DEPLOY_DIR/.env"
             fi
             
             cd "$DEPLOY_DIR"
             
-            if command -v docker >/dev/null 2>&1; then
-              DOCKER_CMD="docker"
-            elif command -v podman >/dev/null 2>&1; then
-              DOCKER_CMD="podman"
-            else
-              echo "Error: Docker/Podman not found."
-              exit 1
-            fi
+            # Setup Docker Command
+            if command -v docker >/dev/null 2>&1; then DOCKER_CMD="docker"; else DOCKER_CMD="podman"; fi
             
-            echo "Pruning builder cache to avoid Alpine version issues..."
+            echo "Pruning old build cache..."
             $DOCKER_CMD builder prune -f
             
-            echo "Building Docker image..."
+            echo "Building image (skipping internal build)..."
             $DOCKER_CMD build -f Dockerfile -t mes-backend:latest .
             
-            if command -v docker-compose >/dev/null 2>&1; then
-              COMPOSE_CMD="docker-compose"
-            elif command -v podman-compose >/dev/null 2>&1; then
-              COMPOSE_CMD="podman-compose"
-            else
-              echo "Error: Compose not found."
-              exit 1
-            fi
+            # Setup Compose Command
+            if command -v docker-compose >/dev/null 2>&1; then COMPOSE_CMD="docker-compose"; else COMPOSE_CMD="podman-compose"; fi
             
-            export CI_REGISTRY_IMAGE="mes-backend"
-            export CI_COMMIT_SHA="latest"
-            
-            echo "Restarting containers..."
+            echo "Restarting services..."
             $COMPOSE_CMD down || true
             $COMPOSE_CMD up -d
             
-            echo "Backend container deployed successfully!"
+            echo "Deployment complete!"
