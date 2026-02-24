@@ -6,7 +6,14 @@ import bcrypt from 'bcrypt';
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { MailService } from '@/app/services/mail/mail.service';
 import { RedisService } from '@/app/services/redis/redis.service';
-import { EXPIRE_TIMESTAMP, OTP_LENGTH, RESET_TOKEN_EXPIRY, VERIFICATION_MAX_ATTEMPT_LIMIT, VERIFICATION_MAX_ATTEMPT_LIMIT_EXPIRY } from '@/common/constants';
+import {
+    EXPIRE_TIMESTAMP,
+    OTP_LENGTH,
+    REFRESH_TOKEN_EXPIRE_TIMESTAMP,
+    RESET_TOKEN_EXPIRY,
+    VERIFICATION_MAX_ATTEMPT_LIMIT,
+    VERIFICATION_MAX_ATTEMPT_LIMIT_EXPIRY,
+} from '@/common/constants';
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 import { type UserSelectOutput } from '@/models/zod-schemas';
@@ -45,14 +52,44 @@ export class AuthService {
             factoryId,
             iat: Math.floor(Date.now() / 1000),
         };
-        const token = this.jwtService.sign(payload);
-        await this.redisService.set(`token:${userId}`, token, EXPIRE_TIMESTAMP);
-        return token;
+        const accessToken = this.jwtService.sign(payload);
+        const refreshToken = this.jwtService.sign({ sub: userId }, { expiresIn: REFRESH_TOKEN_EXPIRE_TIMESTAMP });
+
+        await this.redisService.set(`token:${userId}`, accessToken, EXPIRE_TIMESTAMP);
+        await this.redisService.set(`refresh_token:${userId}`, refreshToken, REFRESH_TOKEN_EXPIRE_TIMESTAMP);
+
+        return { accessToken, refreshToken };
+    }
+
+    async refreshToken(token: string) {
+        if (!token) throw new UnauthorizedException('Refresh token is required');
+
+        try {
+            const decoded = this.jwtService.verify(token);
+            const userId = decoded.sub;
+
+            const storedRefreshToken = await this.redisService.get(`refresh_token:${userId}`);
+
+            if (storedRefreshToken !== token) {
+                throw new UnauthorizedException('Invalid or expired refresh token');
+            }
+
+            const user = await this.usersService.findOne(userId);
+            if (!user) {
+                throw new UnauthorizedException('User not found');
+            }
+
+            // Issue new tokens
+            return await this.setToken(user.id, user.email, user.roleId, user.factoryId!);
+        } catch (error) {
+            this.logger.error('Failed to verify refresh token:', error);
+            throw new UnauthorizedException('Invalid or expired refresh token');
+        }
     }
 
     async signup(signupDto: SignupDto) {
         let user: UserSelectOutput | null = null;
-        let token: string | null = null;
+        let tokenData: { accessToken: string; refreshToken: string } | null = null;
 
         try {
             const hashedPassword = await bcrypt.hash(signupDto.password!, 10);
@@ -105,10 +142,15 @@ export class AuthService {
                 await this.mailService.sendVerification(emailData);
             }
 
-            token = await this.setToken(user.id, signupDto.email, user.roleId, user.factoryId!);
+            tokenData = await this.setToken(user.id, signupDto.email, user.roleId, user.factoryId!);
 
             // Here you would typically send a verification email
-            return { accessToken: token, email: signupDto.email, message: 'Registration successful. Please verify your email.' };
+            return {
+                accessToken: tokenData.accessToken,
+                refreshToken: tokenData.refreshToken,
+                email: signupDto.email,
+                message: 'Registration successful. Please verify your email.',
+            };
         } catch (error) {
             this.logger.error('Unexpected error on user signup:', error);
 
@@ -119,9 +161,10 @@ export class AuthService {
                     this.logger.error('Failed to cleanup user after signup error:', cleanupError);
                 }
             }
-            if (token && user) {
+            if (tokenData && user) {
                 try {
                     await this.redisService.del(`token:${user.id}`);
+                    await this.redisService.del(`refresh_token:${user.id}`);
                 } catch (cleanupError) {
                     this.logger.error('Failed to cleanup token after signup error:', cleanupError);
                 }
@@ -190,11 +233,11 @@ export class AuthService {
         }
 
         try {
-            const accessToken = await this.setToken(user.id, user.email, user.roleId, user.factoryId!);
+            const tokenData = await this.setToken(user.id, user.email, user.roleId, user.factoryId!);
 
             // Return public user data (excluding sensitive fields)
             const { verificationToken: _, deletedAt: __, ...userData } = user;
-            return { accessToken, user: userData, settings: userSettings, isVerified: user.isVerified };
+            return { accessToken: tokenData.accessToken, refreshToken: tokenData.refreshToken, user: userData, settings: userSettings, isVerified: user.isVerified };
         } catch (error) {
             this.logger.error('Failed to generate authentication token', error);
             throw new UnauthorizedException('Something went wrong while logging you in. Please try again in a moment.');
@@ -203,6 +246,7 @@ export class AuthService {
 
     async logout(userId: string) {
         await this.redisService.del(`token:${userId}`);
+        await this.redisService.del(`refresh_token:${userId}`);
         this.logger.log('User logged out successfully', { userId });
         return { message: 'Logged out successfully' };
     }
@@ -230,6 +274,7 @@ export class AuthService {
         this.logger.log('Password changed successfully', { userId, email });
 
         await this.redisService.del(`token:${userId}`);
+        await this.redisService.del(`refresh_token:${userId}`);
 
         return {
             success: true,
@@ -371,6 +416,7 @@ export class AuthService {
 
         // Invalidate all existing tokens for this user
         await this.redisService.del(`token:${user.id}`);
+        await this.redisService.del(`refresh_token:${user.id}`);
         await this.redisService.del(`otp:${user.id}`);
 
         return { message: 'Password has been reset successfully' };

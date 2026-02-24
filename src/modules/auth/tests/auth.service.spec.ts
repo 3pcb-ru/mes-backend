@@ -25,6 +25,7 @@ describe('AuthService', () => {
     const usersServiceMock = {
         create: jest.fn(),
         findByEmail: jest.fn(),
+        findOne: jest.fn(),
         remove: jest.fn(),
         findByVerificationToken: jest.fn(),
         verify: jest.fn(),
@@ -47,11 +48,13 @@ describe('AuthService', () => {
     beforeEach(async () => {
         const mockJwtService = {
             sign: jest.fn().mockReturnValue('mock_token'),
+            verify: jest.fn(),
         };
 
         const mockRedisService = {
             set: jest.fn().mockResolvedValue('OK'),
             del: jest.fn().mockResolvedValue(1),
+            get: jest.fn(),
         };
 
         const module: TestingModule = await Test.createTestingModule({
@@ -102,6 +105,52 @@ describe('AuthService', () => {
         expect(service).toBeDefined();
     });
 
+    describe('refreshToken', () => {
+        it('should throw UnauthorizedException if no token is provided', async () => {
+            await expect(service.refreshToken('')).rejects.toThrow('Refresh token is required');
+        });
+
+        it('should throw error if token is invalid or does not match redis', async () => {
+            const mockVerify = jest.spyOn(_jwtService, 'verify').mockReturnValue({ sub: 'user-123' });
+            jest.spyOn(redisService, 'get').mockResolvedValue('different-token');
+
+            await expect(service.refreshToken('my-token')).rejects.toThrow('Invalid or expired refresh token');
+            mockVerify.mockRestore();
+        });
+
+        it('should throw error if user is not found', async () => {
+            const mockVerify = jest.spyOn(_jwtService, 'verify').mockReturnValue({ sub: 'user-123' });
+            jest.spyOn(redisService, 'get').mockResolvedValue('my-token');
+            usersServiceMock.findOne = jest.fn().mockRejectedValue(new Error('User not found'));
+
+            await expect(service.refreshToken('my-token')).rejects.toThrow('Invalid or expired refresh token');
+            mockVerify.mockRestore();
+        });
+
+        it('should issue new tokens if refresh token is valid', async () => {
+            const mockVerify = jest.spyOn(_jwtService, 'verify').mockReturnValue({ sub: 'user-123' });
+            jest.spyOn(redisService, 'get').mockResolvedValue('my-token');
+            const mockUser = {
+                id: 'user-123',
+                email: 'test@example.com',
+                roleId: 'role-1',
+                factoryId: 'factory-1',
+            };
+            usersServiceMock.findOne = jest.fn().mockResolvedValue(mockUser);
+
+            const redisSetSpy = jest.spyOn(redisService, 'set');
+
+            const result = await service.refreshToken('my-token');
+
+            expect(result).toHaveProperty('accessToken');
+            expect(result).toHaveProperty('refreshToken');
+            expect(redisSetSpy).toHaveBeenCalledWith('token:user-123', expect.any(String), expect.any(Number));
+            expect(redisSetSpy).toHaveBeenCalledWith('refresh_token:user-123', expect.any(String), expect.any(Number));
+
+            mockVerify.mockRestore();
+        });
+    });
+
     describe('Signup', () => {
         it('should create a new user on signup', async () => {
             const signupDto = {
@@ -135,6 +184,7 @@ describe('AuthService', () => {
 
             // expect(result).toHaveProperty('data');
             expect(result).toHaveProperty('accessToken');
+            expect(result).toHaveProperty('refreshToken');
             expect(result).toHaveProperty('email', 'test@example.com');
         });
 
@@ -204,6 +254,7 @@ describe('AuthService', () => {
 
             // expect(result).toHaveProperty('data');
             expect(result).toHaveProperty('accessToken');
+            expect(result).toHaveProperty('refreshToken');
             expect(typeof result.accessToken).toBe('string');
             expect(result).toHaveProperty('email', signupDto.email);
         });
@@ -239,6 +290,7 @@ describe('AuthService', () => {
             await service.signup(signupDto);
 
             expect(redisSetSpy).toHaveBeenCalledWith('token:mock-id', expect.any(String), expect.any(Number));
+            expect(redisSetSpy).toHaveBeenCalledWith('refresh_token:mock-id', expect.any(String), expect.any(Number));
         });
     });
 
@@ -316,7 +368,7 @@ describe('AuthService', () => {
 
             // expect(result).toHaveProperty('data');
             expect(result).toHaveProperty('accessToken');
-            // expect(typeof result.data.accessToken).toBe('string');
+            expect(result).toHaveProperty('refreshToken');
             expect(result).toHaveProperty('email', signupDto.email);
         });
 
@@ -351,6 +403,7 @@ describe('AuthService', () => {
             await service.signup(signupDto);
 
             expect(redisSetSpy).toHaveBeenCalledWith('token:mock-id', expect.any(String), expect.any(Number));
+            expect(redisSetSpy).toHaveBeenCalledWith('refresh_token:mock-id', expect.any(String), expect.any(Number));
         });
     });
 
@@ -362,6 +415,7 @@ describe('AuthService', () => {
             await service.logout(userId);
 
             expect(redisDelSpy).toHaveBeenCalledWith(`token:${userId}`);
+            expect(redisDelSpy).toHaveBeenCalledWith(`refresh_token:${userId}`);
         });
 
         it('should return success message', async () => {
@@ -481,6 +535,7 @@ describe('AuthService', () => {
                 password: '$2b$10$hashedNewPassword',
             });
             expect(redisService.del).toHaveBeenCalledWith('token:user-123');
+            expect(redisService.del).toHaveBeenCalledWith('refresh_token:user-123');
             expect(result).toEqual({
                 success: true,
                 message: 'Password changed successfully. Please log in again with your new password.',

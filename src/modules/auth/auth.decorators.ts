@@ -1,9 +1,17 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ZodResponse } from 'nestjs-zod';
 
 import { ErrorResponseDto } from '@/common/dto/error.dto';
-import { SignupApiResponseDto, MessageApiResponseDto, ValidateResetCodeApiResponseDto, ResendStatusApiResponseDto, LoginApiResponseWithSettingsDto } from './auth.dto';
+
+import {
+    LoginApiResponseWithSettingsDto,
+    MessageApiResponseDto,
+    RefreshTokenApiResponseDto,
+    ResendStatusApiResponseDto,
+    SignupApiResponseDto,
+    ValidateResetCodeApiResponseDto,
+} from './auth.dto';
 
 const authEndpointConfig = {
     signup: () =>
@@ -75,6 +83,13 @@ const authEndpointConfig = {
         ),
 
     resendStatus: () => applyDecorators(ApiOperation({ summary: 'Get resend verification status' }), ZodResponse({ type: ResendStatusApiResponseDto })),
+
+    refreshToken: () =>
+        applyDecorators(
+            ApiOperation({ summary: 'Refresh access token and get new pair' }),
+            ZodResponse({ status: 200, type: RefreshTokenApiResponseDto, description: 'Returns new accessToken and refreshToken' }),
+            ApiResponse({ status: 401, description: 'Invalid or expired refresh token', type: ErrorResponseDto }),
+        ),
 } as const;
 
 export type AuthEndpointKey = keyof typeof authEndpointConfig;

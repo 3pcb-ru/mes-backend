@@ -61,9 +61,14 @@ const resendVerificationSchema = z.object({
     email: z.email('Please enter a valid email address').transform((s) => s?.trim()?.toLowerCase()),
 });
 
+const refreshTokenSchema = z.object({
+    refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+
 // Output Schemas
 const loginResponseSchema = z.object({
     accessToken: z.string(),
+    refreshToken: z.string(),
     user: publicUserSelectSchema,
     settings: userSettingsSelectSchema.nullable(),
     isVerified: z.boolean(),
@@ -75,11 +80,17 @@ const loginResponseWithSettingsSchema = loginResponseSchema.extend({
 
 const signupResponseSchema = z.object({
     accessToken: z.string().optional(),
+    refreshToken: z.string().optional(),
     email: z.email(),
 });
 
 const messageResponseSchema = z.object({
     message: z.string(),
+});
+
+const refreshTokenResponseSchema = z.object({
+    accessToken: z.string(),
+    refreshToken: z.string(),
 });
 
 const validateResetCodeResponseSchema = z.object({
@@ -101,6 +112,7 @@ export class ValidateResetCodeDto extends createStrictZodDto(validateResetCodeSc
 export class ResetPasswordDto extends createStrictZodDto(resetPasswordSchema) {}
 export class ChangePasswordDto extends createStrictZodDto(changePasswordSchema) {}
 export class ResendVerificationDto extends createStrictZodDto(resendVerificationSchema) {}
+export class RefreshTokenDto extends createStrictZodDto(refreshTokenSchema) {}
 
 // API Response DTO's
 export class LoginApiResponseDto extends createApiResponseDto(loginResponseSchema) {}
@@ -109,3 +121,4 @@ export class MessageApiResponseDto extends createApiResponseDto(messageResponseS
 export class ValidateResetCodeApiResponseDto extends createApiResponseDto(validateResetCodeResponseSchema) {}
 export class ResendStatusApiResponseDto extends createApiResponseDto(resendStatusResponseSchema) {}
 export class LoginApiResponseWithSettingsDto extends createApiResponseDto(loginResponseWithSettingsSchema) {}
+export class RefreshTokenApiResponseDto extends createApiResponseDto(refreshTokenResponseSchema) {}
