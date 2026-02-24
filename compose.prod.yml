@@ -23,16 +23,12 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-      
-      # MINIO VARS
       - MINIO_ENDPOINT=minio
       - MINIO_PORT=9000
       - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
       - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
       - MINIO_USE_SSL=false
       - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
-
-      # SERVER & AUTH VARS
       - SERVER_HOST=${SERVER_HOST}
       - SERVER_PROTOCOL=${SERVER_PROTOCOL}
       - JWT_SECRET=${JWT_SECRET}
@@ -43,6 +39,9 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      # API now waits for the setup script to finish creating the bucket
+      minio-setup:
+        condition: service_completed_successfully
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4001/health"]
@@ -98,3 +97,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # THE NEW SETUP CONTAINER
+  minio-setup:
+    image: minio/mc:latest
+    container_name: mes-backend-minio-setup
+    networks:
+      - mes-network
+    environment:
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
+    depends_on:
+      minio:
+        condition: service_healthy
+    command: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 $${MINIO_ACCESS_KEY} $${MINIO_SECRET_KEY} &&
+      /usr/bin/mc mb myminio/$${MINIO_BUCKET_NAME} --ignore-existing || true
+      "
