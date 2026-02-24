@@ -140,8 +140,14 @@ jobs:
             
             echo "🚀 Starting containers directly with exported shell variables..."
             if ! $COMPOSE_CMD up -d; then
-                echo "❌ Deployment failed! Postgres logs:"
-                $DOCKER_CMD logs mes-backend-postgres-1 || true
+                echo "❌ Deployment failed! Let's check the real culprits:"
+                
+                echo "--- MINIO SETUP LOGS ---"
+                $DOCKER_CMD logs mes-backend-minio-setup || true
+                
+                echo "--- API LOGS ---"
+                $DOCKER_CMD logs mes-backend-api-1 || true
+                
                 exit 1
             fi
             
