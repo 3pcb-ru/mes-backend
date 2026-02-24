@@ -15,6 +15,8 @@ services:
     # THIS LOADS YOUR ENTIRE .ENV FILE AT ONCE!
     env_file:
       - .env
+    ports:
+      - "4000:4000"
     depends_on:
       postgres:
         condition: service_healthy
