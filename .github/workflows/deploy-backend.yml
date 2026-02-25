@@ -120,3 +120,4 @@ jobs:
             
             echo "✅ Deployment successful! Containers:"
             $DOCKER_CMD ps
+            #redeploy
