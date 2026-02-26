@@ -15,10 +15,10 @@ export class ProductService {
         return { data };
     }
 
-    async create(payload: CreateProductDto, factoryId: string) {
+    async create(payload: CreateProductDto, organizationId: string) {
         const [p] = await this.drizzleService.database
             .insert(product)
-            .values({ ...payload, factoryId })
+            .values({ ...payload, organizationId })
             .returning();
         return p;
     }

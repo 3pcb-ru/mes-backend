@@ -21,7 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         this.logger.setContext(JwtStrategy.name);
     }
 
-    async validate(payload: { sub: string; email: string; firstName: string; lastName: string; roleId: string; factoryId?: string }) {
+    async validate(payload: { sub: string; email: string; firstName: string; lastName: string; roleId: string; organizationId?: string }) {
         if (!payload || !payload.sub) {
             this.logger.warn('Invalid JWT payload', payload);
             throw new UnauthorizedException('Invalid token');
@@ -51,7 +51,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
                 lastName: payload.lastName,
                 roleId,
                 permissions,
-                factoryId: payload.factoryId,
+                organizationId: payload.organizationId,
             };
         } catch (error) {
             this.logger.error('JWT validation failed:', error);

@@ -22,10 +22,10 @@ export class ProductController {
 
     @Post()
     async create(@Body() body: CreateProductDto, @CurrentUser() user: JwtUser) {
-        if (!user.factoryId) {
-            throw new Error('User does not belong to any factory/organization');
+        if (!user.organizationId) {
+            throw new Error('User does not belong to any organization');
         }
-        const result = await this.svc.create(body, user.factoryId);
+        const result = await this.svc.create(body, user.organizationId);
         return ok(result);
     }
 
@@ -37,12 +37,12 @@ export class ProductController {
 
     @Put(':id')
     async update(@Param('id') id: string, @Body() body: UpdateProductDto, @CurrentUser() user: JwtUser) {
-        if (!user.factoryId) {
-            throw new Error('User does not belong to any factory/organization');
+        if (!user.organizationId) {
+            throw new Error('User does not belong to any organization');
         }
-        // TODO: implement factoryId check
+        // TODO: implement organizationId check
         // const product = await this.svc.findOne(id);
-        // if (product.factoryId !== user.factoryId) {
+        // if (product.organizationId !== user.organizationId) {
         //     throw new Error('User does not have permission to update this product');
         // }
         const result = await this.svc.update(id, body);

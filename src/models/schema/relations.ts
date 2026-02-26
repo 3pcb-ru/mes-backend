@@ -1,15 +1,15 @@
 import { relations } from 'drizzle-orm';
-import { user } from './users.schema';
-import { roles } from './roles.schema';
-import { factory } from './factory.schema';
-import { product } from './product.schema';
-import { bomRevision, bomItem } from './bom.schema';
-import { workOrder } from './work-order.schema';
-import { rolePermissions } from './roles.schema';
-import { permissions } from './permissions.schema';
 
-// Factory Relations
-export const factoryRelations = relations(factory, ({ many }) => ({
+import { bomItem, bomRevision } from './bom.schema';
+import { organization } from './organization.schema';
+import { permissions } from './permissions.schema';
+import { product } from './product.schema';
+import { rolePermissions, roles } from './roles.schema';
+import { user } from './users.schema';
+import { workOrder } from './work-order.schema';
+
+// Organization Relations
+export const organizationRelations = relations(organization, ({ many }) => ({
     products: many(product),
     workOrders: many(workOrder),
     users: many(user),
@@ -17,9 +17,9 @@ export const factoryRelations = relations(factory, ({ many }) => ({
 
 // Product Relations
 export const productRelations = relations(product, ({ one, many }) => ({
-    factory: one(factory, {
-        fields: [product.factoryId],
-        references: [factory.id],
+    organization: one(organization, {
+        fields: [product.organizationId],
+        references: [organization.id],
     }),
     revisions: many(bomRevision),
 }));
@@ -43,9 +43,9 @@ export const bomItemRelations = relations(bomItem, ({ one }) => ({
 
 // Work Order Relations
 export const workOrderRelations = relations(workOrder, ({ one }) => ({
-    factory: one(factory, {
-        fields: [workOrder.factoryId],
-        references: [factory.id],
+    organization: one(organization, {
+        fields: [workOrder.organizationId],
+        references: [organization.id],
     }),
     bomRevision: one(bomRevision, {
         fields: [workOrder.bomRevisionId],
@@ -59,9 +59,9 @@ export const usersRelations = relations(user, ({ one }) => ({
         fields: [user.roleId],
         references: [roles.id],
     }),
-    factory: one(factory, {
-        fields: [user.factoryId],
-        references: [factory.id],
+    organization: one(organization, {
+        fields: [user.organizationId],
+        references: [organization.id],
     }),
 }));
 

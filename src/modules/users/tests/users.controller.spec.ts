@@ -1,12 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
-import { UsersController } from '../users.controller';
-import { UsersService } from '../users.service';
-import { UpdateUserProfileDto } from '../users.dto';
+import { Test, TestingModule } from '@nestjs/testing';
+
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { RedisService } from '@/app/services/redis/redis.service';
-import { RateLimitGuard } from '../../auth/guards/rate-limit.guard';
 import { JwtUser } from '@/types/jwt.types';
+
+import { RateLimitGuard } from '../../auth/guards/rate-limit.guard';
+import { UsersController } from '../users.controller';
+import { UpdateUserProfileDto } from '../users.dto';
+import { UsersService } from '../users.service';
 
 // Simple unit tests focused on business logic without NestJS guards
 describe('UsersController Unit Tests', () => {
@@ -20,7 +22,7 @@ describe('UsersController Unit Tests', () => {
         lastName: 'Doe',
         roleId: '1',
         permissions: [] as string[],
-        factoryId: 'factory-1',
+        organizationId: 'org-1',
     };
 
     const mockPublicUser = {

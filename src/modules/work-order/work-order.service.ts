@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { and, eq } from 'drizzle-orm';
+
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 
@@ -11,16 +12,16 @@ export class WorkOrderService {
         this.db = this.drizzle.database;
     }
 
-    async createWorkOrder(factoryId: string, bomRevisionId: string, targetQuantity: number) {
+    async createWorkOrder(organizationId: string, bomRevisionId: string, targetQuantity: number) {
         // Validate BOM exists and is released
         const revision = await this.db.query.bomRevision.findFirst({
             where: eq(Schema.bomRevision.id, bomRevisionId),
             with: {
                 product: true,
-            }
+            },
         });
 
-        if (!revision || revision.product.factoryId !== factoryId) {
+        if (!revision || revision.product.organizationId !== organizationId) {
             throw new NotFoundException('BOM Revision not found');
         }
 
@@ -32,19 +33,22 @@ export class WorkOrderService {
             throw new BadRequestException('Target quantity must be greater than zero');
         }
 
-        const [workOrder] = await this.db.insert(Schema.workOrder).values({
-            factoryId,
-            bomRevisionId,
-            targetQuantity: targetQuantity.toString(),
-            status: 'draft',
-        }).returning();
+        const [workOrder] = await this.db
+            .insert(Schema.workOrder)
+            .values({
+                organizationId,
+                bomRevisionId,
+                targetQuantity: targetQuantity.toString(),
+                status: 'draft',
+            })
+            .returning();
 
         return workOrder;
     }
 
-    async releaseWorkOrder(workOrderId: string, factoryId: string) {
+    async releaseWorkOrder(workOrderId: string, organizationId: string) {
         const wo = await this.db.query.workOrder.findFirst({
-            where: and(eq(Schema.workOrder.id, workOrderId), eq(Schema.workOrder.factoryId, factoryId))
+            where: and(eq(Schema.workOrder.id, workOrderId), eq(Schema.workOrder.organizationId, organizationId)),
         });
 
         if (!wo) throw new NotFoundException('Work Order not found');
@@ -53,23 +57,21 @@ export class WorkOrderService {
             throw new BadRequestException('Work order is not in draft status');
         }
 
-        await this.db.update(Schema.workOrder)
-            .set({ status: 'released', updatedAt: new Date() })
-            .where(eq(Schema.workOrder.id, workOrderId));
+        await this.db.update(Schema.workOrder).set({ status: 'released', updatedAt: new Date() }).where(eq(Schema.workOrder.id, workOrderId));
 
         return { message: 'Work order released' };
     }
 
-    async listWorkOrders(factoryId: string) {
+    async listWorkOrders(organizationId: string) {
         return await this.db.query.workOrder.findMany({
-            where: eq(Schema.workOrder.factoryId, factoryId),
+            where: eq(Schema.workOrder.organizationId, organizationId),
             with: {
                 bomRevision: {
                     with: {
                         product: true,
-                    }
-                }
-            }
+                    },
+                },
+            },
         });
     }
 }

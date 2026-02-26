@@ -134,7 +134,7 @@ describe('AuthService', () => {
                 id: 'user-123',
                 email: 'test@example.com',
                 roleId: 'role-1',
-                factoryId: 'factory-1',
+                organizationId: 'org-1',
             };
             usersServiceMock.findOne = jest.fn().mockResolvedValue(mockUser);
 
@@ -160,7 +160,7 @@ describe('AuthService', () => {
                 lastName: 'B',
                 sendMail: false,
                 acceptTerms: true,
-                factoryName: 'Test Factory',
+                organizationName: 'Test Organization',
             };
 
             usersServiceMock.findByEmail.mockResolvedValue(null);
@@ -175,7 +175,7 @@ describe('AuthService', () => {
                 verificationToken: 'verificationToken123',
                 isVerified: true,
                 roleId: 'test-role-id',
-                factoryId: 'factory-1',
+                organizationId: 'org-1',
             });
 
             const result = await service.signup(signupDto);
@@ -196,7 +196,7 @@ describe('AuthService', () => {
                 lastName: 'Doe',
                 sendMail: true,
                 acceptTerms: true,
-                factoryName: 'Test Factory',
+                organizationName: 'Test Organization',
             };
 
             const verificationToken = 'verificationToken123';
@@ -213,7 +213,7 @@ describe('AuthService', () => {
                 verificationToken,
                 isVerified: false,
                 roleId: 'test-role-id',
-                factoryId: 'factory-1',
+                organizationId: 'org-1',
             });
 
             await service.signup(signupDto);
@@ -232,7 +232,7 @@ describe('AuthService', () => {
                 lastName: 'User',
                 sendMail: false,
                 acceptTerms: true,
-                factoryName: 'Test Factory',
+                organizationName: 'Test Organization',
             };
 
             usersServiceMock.findByEmail.mockResolvedValue(null);
@@ -247,7 +247,7 @@ describe('AuthService', () => {
                 verificationToken: 'verificationToken789',
                 isVerified: false,
                 roleId: 'test-role-id',
-                factoryId: 'factory-1',
+                organizationId: 'org-1',
             });
 
             const result = await service.signup(signupDto);
@@ -267,7 +267,7 @@ describe('AuthService', () => {
                 lastName: 'Doe',
                 sendMail: false,
                 acceptTerms: true,
-                factoryName: 'Test Factory',
+                organizationName: 'Test Organization',
             };
 
             usersServiceMock.findByEmail.mockResolvedValue(null);
@@ -282,7 +282,7 @@ describe('AuthService', () => {
                 verificationToken: 'verificationToken456',
                 isVerified: false,
                 roleId: 'test-role-id',
-                factoryId: 'factory-1',
+                organizationId: 'org-1',
             });
 
             const redisSetSpy = jest.spyOn(redisService, 'set');
@@ -307,7 +307,7 @@ describe('AuthService', () => {
                 createdAt: new Date(),
                 updatedAt: new Date(),
                 deletedAt: null,
-                factoryId: 'factory-1',
+                organizationId: 'org-1',
             };
 
             usersServiceMock.findByVerificationToken.mockResolvedValue(mockUser);
@@ -346,7 +346,7 @@ describe('AuthService', () => {
                 lastName: 'User',
                 sendMail: false,
                 acceptTerms: true,
-                factoryName: 'Test Factory',
+                organizationName: 'Test Organization',
             };
 
             usersServiceMock.findByEmail.mockResolvedValue(null);
@@ -361,7 +361,7 @@ describe('AuthService', () => {
                 verificationToken: 'verificationToken789',
                 isVerified: false,
                 roleId: 'test-role-id',
-                factoryId: 'factory-1',
+                organizationId: 'org-1',
             });
 
             const result = await service.signup(signupDto);
@@ -380,7 +380,7 @@ describe('AuthService', () => {
                 lastName: 'Doe',
                 sendMail: false,
                 acceptTerms: true,
-                factoryName: 'Test Factory',
+                organizationName: 'Test Organization',
             };
 
             usersServiceMock.findByEmail.mockResolvedValue(null);
@@ -395,7 +395,7 @@ describe('AuthService', () => {
                 verificationToken: 'verificationToken456',
                 isVerified: false,
                 roleId: 'test-role-id',
-                factoryId: 'factory-1',
+                organizationId: 'org-1',
             });
 
             const redisSetSpy = jest.spyOn(redisService, 'set');
@@ -444,7 +444,7 @@ describe('AuthService', () => {
                 verificationToken: 'token',
                 isVerified: true,
                 roleId: 'test-role-id',
-                factoryId: 'factory-1',
+                organizationId: 'org-1',
             };
 
             const mockMailService = {
@@ -502,7 +502,7 @@ describe('AuthService', () => {
             password: '$2b$10$hashedCurrentPassword',
             firstName: 'John',
             lastName: 'Doe',
-            factoryId: 'factory-1',
+            organizationId: 'org-1',
         };
 
         const changePasswordDto = {

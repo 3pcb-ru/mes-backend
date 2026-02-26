@@ -57,7 +57,7 @@ describe('AuthController', () => {
 
     describe('signup', () => {
         it('should call signup and return result', async () => {
-            const dto = { email: 'test@example.com', password: '123', firstName: 'A', lastName: 'B', sendMail: false, acceptTerms: true, factoryName: 'Test Factory' };
+            const dto = { email: 'test@example.com', password: '123', firstName: 'A', lastName: 'B', sendMail: false, acceptTerms: true, organizationName: 'Test Organization' };
             const mockResult = { success: true, data: { accessToken: 'token', email: dto.email } };
 
             mockAuthService.signup.mockResolvedValue(mockResult);
@@ -69,7 +69,7 @@ describe('AuthController', () => {
         });
 
         it('Should throw if required fields are missing .', async () => {
-            const dto = { email: '', password: '', firstName: 'A', lastName: 'B', sendMail: false, acceptTerms: true, factoryName: '' };
+            const dto = { email: '', password: '', firstName: 'A', lastName: 'B', sendMail: false, acceptTerms: true, organizationName: '' };
             // const mockResult = { success: false, message: 'Invalid credentials' };
 
             // const result = await controller.signup(dto);
@@ -138,7 +138,7 @@ describe('AuthController', () => {
 
     describe('logout', () => {
         it('should call logout and return result', async () => {
-            const req = { user: { id: 'user-1', email: '', roleId: '', factoryId: 'factory-1', permissions: [] } };
+            const req = { user: { id: 'user-1', email: '', roleId: '', organizationId: 'org-1', permissions: [] } };
             const mockResult = { message: 'Logged out successfully' };
 
             mockAuthService.logout.mockResolvedValue(mockResult);
@@ -149,7 +149,7 @@ describe('AuthController', () => {
         });
 
         it('Should handle and return error if authService.logout throws', async () => {
-            const req = { user: { id: 'user-1', email: '', roleId: '', factoryId: 'factory-1', permissions: [] } };
+            const req = { user: { id: 'user-1', email: '', roleId: '', organizationId: 'org-1', permissions: [] } };
             const error = new InternalServerErrorException('Unexpected error');
 
             mockAuthService.logout.mockRejectedValue(error);

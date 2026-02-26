@@ -1,10 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { UsersService } from '../users.service';
-import { DrizzleService } from '@/models/model.service';
-import { FilterService } from '@/common/services/filter.service';
+import { Test, TestingModule } from '@nestjs/testing';
+
 import { PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
+import { FilterService } from '@/common/services/filter.service';
+import { DrizzleService } from '@/models/model.service';
+
 import { UpdateUserProfileDto } from '../users.dto';
+import { UsersService } from '../users.service';
 
 describe('UsersService', () => {
     let service: UsersService;
@@ -16,7 +18,7 @@ describe('UsersService', () => {
         lastName: 'Doe',
         isVerified: true,
         roleId: '1',
-        factoryId: 'factory-1',
+        organizationId: 'org-1',
         createdAt: new Date('2024-01-01T00:00:00.000Z'),
         updatedAt: new Date('2024-01-01T00:00:00.000Z'),
         permissions: ['users.read', 'users.update'],
@@ -32,9 +34,9 @@ describe('UsersService', () => {
             createdAt: new Date('2024-01-01T00:00:00.000Z'),
             deletedAt: null,
         },
-        factory: {
-            id: 'factory-1',
-            name: 'Test Factory',
+        organization: {
+            id: 'org-1',
+            name: 'Test Organization',
             createdAt: new Date('2024-01-01T00:00:00.000Z'),
             deletedAt: null,
         },
@@ -133,18 +135,18 @@ describe('UsersService', () => {
             const mockResult = { data: [mockPublicUser], total: 1, page: 1, limit: 10 };
             mockResponses = [
                 [mockPublicUser], // 1. select data
-                [{ count: 1 }],   // 2. count query
+                [{ count: 1 }], // 2. count query
             ];
-            
-            const query: PaginatedFilterQueryDto = { 
-                page: 1, 
+
+            const query: PaginatedFilterQueryDto = {
+                page: 1,
                 limit: 10,
                 filters: [],
                 joinOperator: 'and',
                 sortOrder: 'desc',
             };
             const result = await service.list(query, mockUser as any);
-            
+
             expect(result.data).toEqual(mockResult.data);
             expect(result.total).toBe(1);
         });
@@ -152,24 +154,24 @@ describe('UsersService', () => {
         it('should list users with factory filter for non-admin', async () => {
             mockResponses = [
                 [mockPublicUser], // 1. select data
-                [{ count: 1 }],   // 2. count query
+                [{ count: 1 }], // 2. count query
             ];
-            
-            const query: PaginatedFilterQueryDto = { 
-                page: 1, 
+
+            const query: PaginatedFilterQueryDto = {
+                page: 1,
                 limit: 10,
                 filters: [],
                 joinOperator: 'and',
                 sortOrder: 'desc',
             };
             const result = await service.list(query, mockUser as any);
-            
+
             expect(result.data).toBeDefined();
         });
 
         it('should return empty result when no users found', async () => {
             mockResponses = [
-                [],             // 1. select data (empty)
+                [], // 1. select data (empty)
                 [{ count: 0 }], // 2. count query
             ];
 
@@ -242,8 +244,8 @@ describe('UsersService', () => {
 
             mockResponses = [
                 [mockPublicUser], // 1. findOne at start of updateProfile
-                [],               // 2. findByEmail check (empty = no conflict)
-                [mockUser],       // 3. update returning
+                [], // 2. findByEmail check (empty = no conflict)
+                [mockUser], // 3. update returning
                 [updatedPublicUser], // 4. final select
             ];
 
@@ -256,7 +258,7 @@ describe('UsersService', () => {
         it('should throw ConflictException when email already exists', async () => {
             mockResponses = [
                 [mockPublicUser], // 1. findOne
-                [mockUser],       // 2. findByEmail (conflict!)
+                [mockUser], // 2. findByEmail (conflict!)
             ];
 
             await expect(service.updateProfile('user-1', updateData, mockUser as any)).rejects.toThrow(ConflictException);
@@ -268,7 +270,7 @@ describe('UsersService', () => {
 
             mockResponses = [
                 [mockPublicUser], // 1. findOne
-                [mockUser],       // 2. update returning
+                [mockUser], // 2. update returning
                 [updatedPublicUser], // 3. final select
             ];
 
@@ -282,7 +284,7 @@ describe('UsersService', () => {
 
             mockResponses = [
                 [mockPublicUser], // 1. findOne
-                [mockUser],       // 2. update
+                [mockUser], // 2. update
                 [updatedPublicUser], // 3. final select
             ];
 
@@ -293,7 +295,7 @@ describe('UsersService', () => {
         it('should handle database errors gracefully', async () => {
             mockResponses = [
                 [mockPublicUser], // 1. findOne
-                [],               // 2. findByEmail
+                [], // 2. findByEmail
                 new Error('Database connection lost'), // 3. update fails
             ];
 

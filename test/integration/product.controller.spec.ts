@@ -41,7 +41,7 @@ describe('ProductController (integration)', () => {
             .useValue({
                 canActivate: (context: any) => {
                     const req = context.switchToHttp().getRequest();
-                    req.user = { id: 'test-user', factoryId: '00000000-0000-0000-0000-000000000000', roleId: 'role-1', permissions: [] };
+                    req.user = { id: 'test-user', organizationId: '00000000-0000-0000-0000-000000000000', roleId: 'role-1', permissions: [] };
                     return true;
                 },
             })

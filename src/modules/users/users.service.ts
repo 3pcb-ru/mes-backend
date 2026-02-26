@@ -1,16 +1,17 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { eq, getTableColumns, sql } from 'drizzle-orm';
 
-import { DrizzleService } from '@/models/model.service';
-import * as Schema from '@/models/schema';
-import { type UserInsertInput, type UserSelectOutput, type PublicUserOutput, type UserUpdateInput, UserSettingsOutput } from '@/models/zod-schemas';
-import { type UpdateUserProfileDto } from './users.dto';
-import { Pagination } from '@/types';
 import { PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
 import { BaseFilterableService } from '@/common/services/base-filterable.service';
 import { FilterService } from '@/common/services/filter.service';
-import { UsersPolicy } from './users.policy';
+import { DrizzleService } from '@/models/model.service';
+import * as Schema from '@/models/schema';
+import { UserSettingsOutput, type PublicUserOutput, type UserInsertInput, type UserSelectOutput, type UserUpdateInput } from '@/models/zod-schemas';
+import { Pagination } from '@/types';
 import { JwtUser } from '@/types/jwt.types';
+
+import { type UpdateUserProfileDto } from './users.dto';
+import { UsersPolicy } from './users.policy';
 
 @Injectable()
 export class UsersService extends BaseFilterableService {
@@ -69,7 +70,7 @@ export class UsersService extends BaseFilterableService {
             .selectFields({
                 ...getTableColumns(Schema.user),
                 role: getTableColumns(Schema.roles),
-                factory: getTableColumns(Schema.factory),
+                organization: getTableColumns(Schema.organization),
             });
 
         return result;
@@ -87,13 +88,13 @@ export class UsersService extends BaseFilterableService {
                 createdAt: Schema.user.createdAt,
                 updatedAt: Schema.user.updatedAt,
                 roleId: Schema.user.roleId,
-                factoryId: Schema.user.factoryId,
+                organizationId: Schema.user.organizationId,
                 role: Schema.roles,
-                factory: Schema.factory,
+                organization: Schema.organization,
             })
             .from(Schema.user)
             .innerJoin(Schema.roles, eq(Schema.user.roleId, Schema.roles.id))
-            .leftJoin(Schema.factory, eq(Schema.user.factoryId, Schema.factory.id))
+            .leftJoin(Schema.organization, eq(Schema.user.organizationId, Schema.organization.id))
             .where(policyWhere)
             .limit(1);
         if (!user) throw new NotFoundException('User not found');
@@ -108,7 +109,7 @@ export class UsersService extends BaseFilterableService {
             })
             .from(Schema.user)
             .innerJoin(Schema.roles, eq(Schema.user.roleId, Schema.roles.id))
-            .leftJoin(Schema.factory, eq(Schema.user.factoryId, Schema.factory.id))
+            .leftJoin(Schema.organization, eq(Schema.user.organizationId, Schema.organization.id))
             .where(eq(sql`lower(${Schema.user.email})`, email.toLowerCase()))
             .limit(1);
         return user || null;
@@ -170,13 +171,13 @@ export class UsersService extends BaseFilterableService {
                     createdAt: Schema.user.createdAt,
                     updatedAt: Schema.user.updatedAt,
                     roleId: Schema.user.roleId,
-                    factoryId: Schema.user.factoryId,
+                    organizationId: Schema.user.organizationId,
                     role: Schema.roles,
-                    factory: Schema.factory,
+                    organization: Schema.organization,
                 })
                 .from(Schema.user)
                 .innerJoin(Schema.roles, eq(Schema.user.roleId, Schema.roles.id))
-                .leftJoin(Schema.factory, eq(Schema.user.factoryId, Schema.factory.id))
+                .leftJoin(Schema.organization, eq(Schema.user.organizationId, Schema.organization.id))
                 .where(eq(Schema.user.id, id));
 
             return updatedUser;

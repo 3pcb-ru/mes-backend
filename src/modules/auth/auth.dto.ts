@@ -19,7 +19,7 @@ const signupSchema = userInsertSchema
     .extend({
         firstName: validateText({ regex: nameRegex }),
         lastName: validateText({ regex: nameRegex }),
-        factoryName: validateText({ min: 2, max: 100 }),
+        organizationName: validateText({ min: 2, max: 100 }),
         password: validateText({ regex: passwordRegex, min: 8, max: 50 }),
         sendMail: z.boolean().optional(),
     });

@@ -7,7 +7,7 @@ export * from './ticket-messages.schema';
 export * from './user-settings.schemas';
 export * from './permissions.schema';
 export * from './roles.schema';
-export * from './factory.schema';
+export * from './organization.schema';
 export * from './product.schema';
 export * from './bom.schema';
 export * from './work-order.schema';

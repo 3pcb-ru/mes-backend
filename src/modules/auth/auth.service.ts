@@ -44,12 +44,12 @@ export class AuthService {
         return new Promise((resolve) => setTimeout(resolve, 100 + Math.random() * ms));
     }
 
-    private async setToken(userId: string, email: string, roleId: string, factoryId: string) {
+    private async setToken(userId: string, email: string, roleId: string, organizationId: string) {
         const payload = {
             email,
             sub: userId,
             roleId,
-            factoryId,
+            organizationId,
             iat: Math.floor(Date.now() / 1000),
         };
         const accessToken = this.jwtService.sign(payload);
@@ -80,7 +80,7 @@ export class AuthService {
             }
 
             // Issue new tokens
-            return await this.setToken(user.id, user.email, user.roleId, user.factoryId!);
+            return await this.setToken(user.id, user.email, user.roleId, user.organizationId!);
         } catch (error) {
             this.logger.error('Failed to verify refresh token:', error);
             throw new UnauthorizedException('Invalid or expired refresh token');
@@ -103,11 +103,11 @@ export class AuthService {
 
             const defaultRole = await this.rolesService.getDefault();
 
-            const { userRecord, factoryRecord } = await this.db.transaction(async (tx) => {
+            const { userRecord, organizationRecord } = await this.db.transaction(async (tx) => {
                 const [f] = await tx
-                    .insert(Schema.factory)
+                    .insert(Schema.organization)
                     .values({
-                        name: signupDto.factoryName,
+                        name: signupDto.organizationName,
                     })
                     .returning();
 
@@ -122,16 +122,16 @@ export class AuthService {
                         verificationToken,
                         isVerified: false,
                         roleId: defaultRole.id,
-                        factoryId: f.id,
+                        organizationId: f.id,
                     })
                     .returning();
 
-                return { userRecord: u, factoryRecord: f };
+                return { userRecord: u, organizationRecord: f };
             });
 
             user = userRecord;
 
-            this.logger.log('User registration initiated', { email: signupDto.email, factoryId: factoryRecord.id });
+            this.logger.log('User registration initiated', { email: signupDto.email, organizationId: organizationRecord.id });
 
             if (signupDto.sendMail) {
                 const emailData = {
@@ -142,7 +142,7 @@ export class AuthService {
                 await this.mailService.sendVerification(emailData);
             }
 
-            tokenData = await this.setToken(user.id, signupDto.email, user.roleId, user.factoryId!);
+            tokenData = await this.setToken(user.id, signupDto.email, user.roleId, user.organizationId!);
 
             // Here you would typically send a verification email
             return {
@@ -233,7 +233,7 @@ export class AuthService {
         }
 
         try {
-            const tokenData = await this.setToken(user.id, user.email, user.roleId, user.factoryId!);
+            const tokenData = await this.setToken(user.id, user.email, user.roleId, user.organizationId!);
 
             // Return public user data (excluding sensitive fields)
             const { verificationToken: _, deletedAt: __, ...userData } = user;
