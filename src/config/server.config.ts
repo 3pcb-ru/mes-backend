@@ -67,13 +67,15 @@ interface IJwtConfiguration {
 }
 
 export const serverConfig = registerAs(API_CONFIG_TOKEN, (): IAppConfiguration => {
-    const serverHost = process.env.SERVER_HOST as string;
+    // Provide sane defaults when env vars are missing (production may rely on reverse proxy)
+    const serverHost = (process.env.SERVER_HOST || '0.0.0.0') as string;
     const serverPort = parseInt(process.env.SERVER_PORT as string, 10) || 4000;
-    const serverProtocol = process.env.SERVER_PROTOCOL as string;
+    const serverProtocol = (process.env.SERVER_PROTOCOL || 'http') as string;
     const serverUrl = `${serverProtocol}://${serverHost}:${serverPort}`;
 
-    const clientProtocol = process.env.CLIENT_PROTOCOL as string;
-    const clientHost = process.env.CLIENT_HOST as string;
+    // Client URL may be served from a proxy/domain (e.g. grvt.cc). Default to https://grvt.cc
+    const clientProtocol = (process.env.CLIENT_PROTOCOL || 'https') as string;
+    const clientHost = (process.env.CLIENT_HOST || process.env.SERVER_HOST || 'grvt.cc') as string;
     const clientUrl = `${clientProtocol}://${clientHost}`;
 
     return {
