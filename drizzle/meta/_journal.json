@@ -281,6 +281,20 @@
       "when": 1769682079457,
       "tag": "0039_strong_stark_industries",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1773133091092,
+      "tag": "0040_enable_ltree_extension",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1773141071120,
+      "tag": "0041_third_dormammu",
+      "breakpoints": true
     }
   ]
 }

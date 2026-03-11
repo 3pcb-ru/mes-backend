@@ -11,4 +11,8 @@ export * from './organization.schema';
 export * from './product.schema';
 export * from './bom.schema';
 export * from './work-order.schema';
+export * from './nodes.schema';
+export * from './inventory.schema';
+export * from './execution.schema';
+export * from './traceability.schema';
 export * from './relations';

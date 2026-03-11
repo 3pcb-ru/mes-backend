@@ -14,18 +14,17 @@ import { PermissionSeederService } from '@/models/seeder/permission-seeder.servi
 import { AttachmentModule } from '@/modules/attachments/attachment.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { BomModule } from '@/modules/bom/bom.module';
+import { ConnectivityModule } from '@/modules/connectivity/connectivity.module';
+import { ExecutionModule } from '@/modules/execution/execution.module';
+import { NodeModule } from '@/modules/node/node.module';
 import { NotificationModule } from '@/modules/notifications/notification.module';
+import { ProductModule } from '@/modules/product/product.module';
 import { RolesModule } from '@/modules/roles/roles.module';
 import { TicketModule } from '@/modules/ticket/ticket.module';
+import { TraceabilityModule } from '@/modules/traceability/traceability.module';
 import { UserAddressesModule } from '@/modules/user-addresses/user-addresses.module';
 import { UsersModule } from '@/modules/users/users.module';
 import { WorkOrderModule } from '@/modules/work-order/work-order.module';
-import { FacilityModule } from '@/modules/facility/facility.module';
-import { InventoryModule } from '@/modules/inventory/inventory.module';
-import { ProductModule } from '@/modules/product/product.module';
-import { ExecutionModule } from '@/modules/execution/execution.module';
-import { TraceabilityModule } from '@/modules/traceability/traceability.module';
-import { ConnectivityModule } from '@/modules/connectivity/connectivity.module';
 
 // Services
 import { AppController } from './app.controller';
@@ -57,8 +56,7 @@ import { RedisModule } from './services/redis/redis.module';
         WorkOrderModule,
         RolesModule,
         NotificationModule,
-        FacilityModule,
-        InventoryModule,
+        NodeModule,
         ProductModule,
         ExecutionModule,
         TraceabilityModule,

@@ -1,33 +1,29 @@
 import { integer, jsonb, numeric, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-import { facilities } from './facilities';
-import { tenants } from './iam';
-
-export const containers = pgTable('containers', {
-    id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id),
-    locationNodeId: uuid('location_node_id').references(() => facilities.id),
-    lpn: text('lpn').notNull(),
-    type: text('type'),
-});
+import { nodes } from './nodes.schema';
+import { organization } from './organization.schema';
 
 export const items = pgTable('items', {
     id: uuid('id').primaryKey().defaultRandom(),
-    tenantId: uuid('tenant_id').references(() => tenants.id),
+    organizationId: uuid('factory_id').references(() => organization.id, { onDelete: 'cascade' }),
     sku: text('sku').notNull(),
     name: text('name').notNull(),
     description: text('description'),
     mslLevel: text('msl_level'),
     documents: jsonb('documents'),
+    createdAt: timestamp('_created', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('_updated', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const inventoryStocks = pgTable('inventory_stocks', {
     id: uuid('id').primaryKey().defaultRandom(),
-    containerId: uuid('container_id').references(() => containers.id),
-    itemId: uuid('item_id').references(() => items.id),
+    nodeId: uuid('node_id').references(() => nodes.id, { onDelete: 'cascade' }),
+    itemId: uuid('item_id').references(() => items.id, { onDelete: 'restrict' }),
     batchCode: text('batch_code'),
     quantity: numeric('quantity', { precision: 10, scale: 4 }),
     mslLevel: text('msl_level'),
     floorLifeRemainingMinutes: integer('floor_life_rem'),
     exposureStartTime: timestamp('exposure_start_time'),
+    createdAt: timestamp('_created', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('_updated', { withTimezone: true }).notNull().defaultNow(),
 });
