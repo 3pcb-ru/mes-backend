@@ -11,7 +11,7 @@ export class TraceabilityService {
     }
 
     async getById(id: string) {
-        return this.logs.find(log => log.id === id);
+        return this.logs.find((log) => log.id === id);
     }
 
     async create(payload: CreateActivityDto) {
