@@ -80,7 +80,40 @@ export class NodeService extends BaseFilterableService {
         return updated;
     }
 
-    async changeStatus(id: string, status: string) {
-        return this.update(id, { status });
+    async changeStatus(id: string, status: string, reason: string, userId: string, organizationId: string) {
+        return await this.db.transaction(async (tx) => {
+            // Fetch the node first, so we know the previous status and ensure it belongs to the org
+            const [node] = await tx.select().from(Schema.nodes).where(eq(Schema.nodes.id, id)).limit(1);
+            if (!node) {
+                throw new NotFoundException('Node not found');
+            }
+
+            const previousStatus = node.status;
+
+            // 1. Update the node status
+            const [updated] = await tx
+                .update(Schema.nodes)
+                .set({
+                    status,
+                    updatedAt: new Date(),
+                })
+                .where(eq(Schema.nodes.id, id))
+                .returning();
+
+            // 2. Log the change to activity_logs
+            await tx.insert(Schema.activityLogs).values({
+                organizationId,
+                userId,
+                nodeId: id,
+                actionType: 'NODE_STATUS_CHANGE',
+                metadata: {
+                    previousStatus,
+                    newStatus: status,
+                    reason,
+                },
+            });
+
+            return updated;
+        });
     }
 }

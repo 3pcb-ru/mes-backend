@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Post, Put, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Request, UseGuards } from '@nestjs/common';
 
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { JwtUser } from '@/types/jwt.types';
 import { ok } from '@/utils';
 
+import { ChangeNodeStatusDto } from './dto/change-node-status.dto';
 import { CreateNodeDto } from './dto/create-node.dto';
 import { NodeService } from './node.service';
 
@@ -25,6 +26,11 @@ export class NodeController {
     @Get(':id')
     async findOne(@Param('id') id: string) {
         return ok(await this.nodeService.findOne(id));
+    }
+
+    @Patch(':id/status')
+    async changeStatus(@Request() req: { user: JwtUser }, @Param('id') id: string, @Body() payload: ChangeNodeStatusDto) {
+        return ok(await this.nodeService.changeStatus(id, payload.status, payload.reason, req.user.id, req.user.organizationId));
     }
 
     @Put(':id')

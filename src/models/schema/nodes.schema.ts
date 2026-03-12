@@ -1,8 +1,19 @@
-import { customType, index, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { customType, index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { organization } from './organization.schema';
 
 const ltree = customType<{ data: string }>({ dataType: () => 'ltree' });
+
+export const nodeStatusChangeReasonEnum = pgEnum('node_status_change_reason_enum', [
+    'NORMAL_OPERATION',
+    'MAINTENANCE',
+    'SETUP_TEARDOWN',
+    'MATERIAL_SHORTAGE',
+    'BREAKDOWN',
+    'QUALITY_ISSUE',
+    'OPERATOR_BREAK',
+    'OTHER',
+]);
 
 export const nodeDefinitions = pgTable('node_definitions', {
     id: uuid('id').primaryKey().defaultRandom(),
