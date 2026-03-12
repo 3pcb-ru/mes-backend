@@ -295,6 +295,13 @@
       "when": 1773141071120,
       "tag": "0041_third_dormammu",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1773293762449,
+      "tag": "0042_curvy_loa",
+      "breakpoints": true
     }
   ]
 }

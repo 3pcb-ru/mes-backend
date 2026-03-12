@@ -37,7 +37,11 @@ export class NodeService extends BaseFilterableService {
 
     async create(organizationId: string, payload: CreateNodeDto) {
         // Warning: Simplified ltree path logic for scoping.
-        const path = payload.parentId ? `${payload.parentId}.child` : `root_${Date.now()}`;
+        let path = `root_${Date.now()}`;
+        if (payload.parentId) {
+            const parent = await this.findOne(payload.parentId);
+            path = `${parent.path}.${Date.now()}`;
+        }
 
         const [node] = await this.db
             .insert(Schema.nodes)
@@ -62,7 +66,7 @@ export class NodeService extends BaseFilterableService {
         return node;
     }
 
-    async update(id: string, payload: any) {
+    async update(id: string, payload: Record<string, any>) {
         const [updated] = await this.db
             .update(Schema.nodes)
             .set({
@@ -76,7 +80,7 @@ export class NodeService extends BaseFilterableService {
         return updated;
     }
 
-    async changeStatus(id: string, status: string, reason?: string) {
+    async changeStatus(id: string, status: string) {
         return this.update(id, { status });
     }
 }
