@@ -108,8 +108,8 @@ jobs:
             echo "🔨 Building Docker image..."
             $DOCKER_CMD build -f Dockerfile -t mes-backend:latest .
             
-            echo "🧹 Wiping old broken volumes..."
-            $COMPOSE_CMD down -v || true
+            echo "🧹 Stopping containers (preserving data)..."
+            $COMPOSE_CMD down || true
             
             echo "🚀 Starting containers..."
             if ! $COMPOSE_CMD up -d; then
