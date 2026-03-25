@@ -5,6 +5,8 @@ import { Module } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { NodeModule } from '../node/node.module';
+import { RolesModule } from '../roles/roles.module';
 import { UsersModule } from '../users/users.module';
 
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -13,7 +15,6 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { API_CONFIG_TOKEN, IAppConfiguration } from '@/config';
 import { MailModule } from '@/app/services/mail/mail.module';
-import { RolesModule } from '../roles/roles.module';
 import { AuthEventsListener } from './auth.listener';
 
 @Module({
@@ -37,6 +38,7 @@ import { AuthEventsListener } from './auth.listener';
             inject: [ConfigService],
         }),
         RolesModule,
+        NodeModule,
     ],
     controllers: [AuthController],
     providers: [AuthService, AuthEventsListener, LocalStrategy, JwtStrategy, CustomLoggerService],

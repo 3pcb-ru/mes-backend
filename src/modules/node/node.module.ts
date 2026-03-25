@@ -6,10 +6,12 @@ import { DrizzleModule } from '@/models/model.module';
 import { NodeController } from './node.controller';
 import { NodeService } from './node.service';
 
+import { SetupService } from './setup.service';
+
 @Module({
     imports: [DrizzleModule],
     controllers: [NodeController],
-    providers: [NodeService, FilterService],
-    exports: [NodeService],
+    providers: [NodeService, SetupService, FilterService],
+    exports: [NodeService, SetupService],
 })
 export class NodeModule {}

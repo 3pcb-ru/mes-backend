@@ -9,6 +9,7 @@ import { DrizzleService } from '@/models/model.service';
 import { RolesService } from '@/modules/roles/roles.service';
 
 import { UsersService } from '../../users/users.service';
+import { SetupService } from '../../node/setup.service';
 import { AuthService } from '../auth.service';
 
 describe('AuthService', () => {
@@ -76,6 +77,7 @@ describe('AuthService', () => {
                 },
                 { provide: ConfigService, useValue: mockConfigService },
                 { provide: RolesService, useValue: { getDefault: jest.fn().mockResolvedValue({ id: 'role-1' }) } },
+                { provide: SetupService, useValue: { createDefaultSetup: jest.fn().mockResolvedValue(undefined) } },
                 {
                     provide: DrizzleService,
                     useValue: {

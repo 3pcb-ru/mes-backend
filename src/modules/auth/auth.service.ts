@@ -21,6 +21,7 @@ import { RandomStringGenerator } from '@/utils/random';
 
 import { RolesService } from '../roles/roles.service';
 import { UsersService } from '../users/users.service';
+import { SetupService } from '../node/setup.service';
 import { ChangePasswordDto, ForgotPasswordDto, LoginDto, ResetPasswordDto, SignupDto, ValidateResetCodeDto } from './auth.dto';
 
 @Injectable()
@@ -33,6 +34,7 @@ export class AuthService {
         private readonly logger: CustomLoggerService,
         private readonly rolesService: RolesService,
         private readonly drizzle: DrizzleService,
+        private readonly setupService: SetupService,
     ) {
         this.logger.setContext(AuthService.name);
         this.db = this.drizzle.database;
@@ -125,6 +127,8 @@ export class AuthService {
                         organizationId: f.id,
                     })
                     .returning();
+
+                await this.setupService.createDefaultSetup(tx, f.id, signupDto.organizationName);
 
                 return { userRecord: u, organizationRecord: f };
             });
