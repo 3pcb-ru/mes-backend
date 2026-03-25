@@ -10,6 +10,10 @@ import { Request } from 'express';
 import { CurrentUser } from '@/common/decorators/user.decorator';
 import { JwtUser } from '@/types/jwt.types';
 
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+
+@ApiTags('Tickets')
+@ApiBearerAuth()
 @Controller('ticket')
 export class TicketController {
     constructor(private readonly ticketService: TicketService) { }

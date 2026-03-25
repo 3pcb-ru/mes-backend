@@ -9,9 +9,10 @@ import { PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { CurrentUser } from '@/common/decorators/user.decorator';
 import { JwtUser } from '@/types/jwt.types';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('users')
+@ApiBearerAuth()
 @Controller('users')
 export class UsersController {
     constructor(

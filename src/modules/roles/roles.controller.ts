@@ -7,6 +7,10 @@ import { RolesDecorators } from './roles.decorators';
 import { AssignRoleDto, CreateRoleDto, UpdateRoleDetailsDto, UpdateRolePermissionsDto } from './roles.dto';
 import { RolesService } from './roles.service';
 
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+
+@ApiTags('Roles & Permissions')
+@ApiBearerAuth()
 @Controller('roles')
 export class RolesController {
     constructor(private readonly rolesService: RolesService) {}

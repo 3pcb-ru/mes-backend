@@ -9,18 +9,25 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductService } from './product.service';
 
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ProductDecorators } from './product.decorators';
+
+@ApiTags('Products')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductController {
     constructor(private readonly svc: ProductService) {}
 
     @Get()
+    @ProductDecorators.list()
     async list() {
         const result = await this.svc.list();
         return ok(result);
     }
 
     @Post()
+    @ProductDecorators.create()
     async create(@Body() body: CreateProductDto, @CurrentUser() user: JwtUser) {
         if (!user.organizationId) {
             throw new Error('User does not belong to any organization');
@@ -30,21 +37,18 @@ export class ProductController {
     }
 
     @Get(':id')
+    @ProductDecorators.findOne()
     async get(@Param('id') id: string) {
         const result = await this.svc.findOne(id);
         return ok(result);
     }
 
     @Put(':id')
+    @ProductDecorators.update()
     async update(@Param('id') id: string, @Body() body: UpdateProductDto, @CurrentUser() user: JwtUser) {
         if (!user.organizationId) {
             throw new Error('User does not belong to any organization');
         }
-        // TODO: implement organizationId check
-        // const product = await this.svc.findOne(id);
-        // if (product.organizationId !== user.organizationId) {
-        //     throw new Error('User does not have permission to update this product');
-        // }
         const result = await this.svc.update(id, body);
         return ok(result);
     }

@@ -8,6 +8,10 @@ import { ok } from '@/utils';
 import { NotificationService } from './notification.service';
 import { NotificationsDecorators } from './notifications.decorators';
 
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+
+@ApiTags('Notifications')
+@ApiBearerAuth()
 @Controller('notifications')
 export class NotificationController {
     constructor(private readonly notificationService: NotificationService) {}
