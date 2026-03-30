@@ -4,7 +4,7 @@ import { OrganizationController } from '../organization.controller';
 import { OrganizationService } from '../organization.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../auth/guards/permission.guard';
-import { UpdateOrganizationDto } from '../organization.dto';
+import { CreateOrganizationDto, UpdateOrganizationDto } from '../organization.dto';
 import { JwtUser } from '@/types/jwt.types';
 
 describe('OrganizationController', () => {
@@ -25,10 +25,11 @@ describe('OrganizationController', () => {
         email: 'test@example.com',
         roleId: 'role-1',
         organizationId: 'org-1',
-        permissions: ['organizations.update'],
+        permissions: ['organizations.update', 'organizations.create'],
     };
 
     const mockOrganizationService = {
+        create: jest.fn().mockResolvedValue(mockOrg),
         update: jest.fn().mockResolvedValue(mockOrg),
     };
 
@@ -52,6 +53,18 @@ describe('OrganizationController', () => {
         service = module.get<OrganizationService>(OrganizationService);
         
         jest.clearAllMocks();
+    });
+
+    describe('create', () => {
+        it('should create organization and return success response', async () => {
+            const createDto: CreateOrganizationDto = { name: 'New Org', timezone: 'UTC' };
+            const result = await controller.create(mockUser, createDto);
+            const payload = result[GET_PAYLOAD]();
+
+            expect(payload.data).toEqual(mockOrg);
+            expect(payload.message).toBe('Organization created and linked successfully');
+            expect(service.create).toHaveBeenCalledWith(createDto, mockUser);
+        });
     });
 
     describe('update', () => {

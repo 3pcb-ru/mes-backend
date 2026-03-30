@@ -14,6 +14,11 @@ const updateOrganizationSchema = z
         message: 'At least one field must be provided for update',
     });
 
+const createOrganizationSchema = z.object({
+    name: validateText({ min: 1, max: 255 }),
+    timezone: z.string().max(50).optional().default('UTC'),
+});
+
 // Response Schema
 const organizationResponseSchema = z.object({
     id: z.uuid({ version: 'v4' }),
@@ -25,5 +30,6 @@ const organizationResponseSchema = z.object({
 });
 
 export class UpdateOrganizationDto extends createStrictZodDto(updateOrganizationSchema) {}
+export class CreateOrganizationDto extends createStrictZodDto(createOrganizationSchema) {}
 export class OrganizationResponseDto extends createStrictZodDto(organizationResponseSchema) {}
 export class OrganizationApiResponseDto extends createStrictZodDto(createApiResponseSchema(organizationResponseSchema)) {}

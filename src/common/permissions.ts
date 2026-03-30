@@ -58,6 +58,7 @@ export const Permissions = {
         Delete: 'notifications.delete',
     },
     organizations: {
+        Create: 'organizations.create',
         Update: 'organizations.update',
     },
 } as const;
@@ -127,4 +128,5 @@ export const PermissionDescriptions: Record<string, string> = {
     'notifications.update': 'Update own notifications (e.g., mark as read)',
     'notifications.delete': 'Delete own notifications',
     'organizations.update': 'Update organization information (name, logo, etc.)',
+    'organizations.create': 'Create and link a new organization',
 };

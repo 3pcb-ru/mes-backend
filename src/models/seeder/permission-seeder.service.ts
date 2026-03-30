@@ -111,19 +111,23 @@ export class PermissionSeederService implements OnModuleInit {
             }
 
             if (authenticatedRole) {
-                // Assign organizations.update permission to Authenticated role
+                // Assign organizations.create and Update permissions to Authenticated role
+                const createOrgPerm = allPerms.find((p) => p.name === Permissions.organizations.Create);
                 const updateOrgPerm = allPerms.find((p) => p.name === Permissions.organizations.Update);
-                if (updateOrgPerm) {
-                    const existingMapping = await tx.query.rolePermissions.findFirst({
-                        where: and(eq(rolePermissionsSchema.roleId, authenticatedRole.id), eq(rolePermissionsSchema.permissionId, updateOrgPerm.id)),
-                    });
-
-                    if (!existingMapping) {
-                        await tx.insert(rolePermissionsSchema).values({
-                            roleId: authenticatedRole.id,
-                            permissionId: updateOrgPerm.id,
+                
+                for (const perm of [createOrgPerm, updateOrgPerm]) {
+                    if (perm) {
+                        const existingMapping = await tx.query.rolePermissions.findFirst({
+                            where: and(eq(rolePermissionsSchema.roleId, authenticatedRole.id), eq(rolePermissionsSchema.permissionId, perm.id)),
                         });
-                        this.logger.log('✅ Added organizations.update permission to Authenticated role');
+
+                        if (!existingMapping) {
+                            await tx.insert(rolePermissionsSchema).values({
+                                roleId: authenticatedRole.id,
+                                permissionId: perm.id,
+                            });
+                            this.logger.log(`✅ Added ${perm.name} permission to Authenticated role`);
+                        }
                     }
                 }
                 this.logger.log('ℹ️ Authenticated role logic completed');

@@ -3,11 +3,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { DrizzleService } from '@/models/model.service';
 import { AttachmentService } from '../../attachments/attachment.service';
 import { OrganizationService } from '../organization.service';
-import { UpdateOrganizationDto } from '../organization.dto';
+import { CreateOrganizationDto, UpdateOrganizationDto } from '../organization.dto';
+import { SetupService } from '../../node/setup.service';
 
 describe('OrganizationService', () => {
     let service: OrganizationService;
     let attachmentService: AttachmentService;
+    let setupService: SetupService;
 
     const mockOrg = {
         id: 'org-1',
@@ -21,18 +23,21 @@ describe('OrganizationService', () => {
     const mockUser = {
         id: 'user-1',
         organizationId: 'org-1',
-        permissions: ['organizations.update'],
+        permissions: ['organizations.update', 'organizations.create'],
     };
 
     let mockResponses: any[] = [];
     const mockDatabase: any = {
         update: jest.fn().mockReturnThis(),
+        insert: jest.fn().mockReturnThis(),
+        values: jest.fn().mockReturnThis(),
         set: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
         returning: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),
         from: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
+        transaction: jest.fn(async (cb) => cb(mockDatabase)),
         async then(onfulfilled: any, onrejected: any) {
             const next = mockResponses.shift();
             const val = next !== undefined ? next : [mockOrg];
@@ -51,6 +56,10 @@ describe('OrganizationService', () => {
         findOne: jest.fn(),
     };
 
+    const mockSetupService = {
+        createDefaultSetup: jest.fn(),
+    };
+
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
             providers: [
@@ -63,14 +72,34 @@ describe('OrganizationService', () => {
                     provide: AttachmentService,
                     useValue: mockAttachmentService,
                 },
+                {
+                    provide: SetupService,
+                    useValue: mockSetupService,
+                },
             ],
         }).compile();
 
         service = module.get<OrganizationService>(OrganizationService);
         attachmentService = module.get<AttachmentService>(AttachmentService);
+        setupService = module.get<SetupService>(SetupService);
 
         jest.clearAllMocks();
         mockResponses = [];
+    });
+
+    describe('create', () => {
+        it('should create organization and link user successfully', async () => {
+            const createData: CreateOrganizationDto = { name: 'New Org', timezone: 'UTC' };
+            const newOrg = { ...mockOrg, id: 'new-org-id', name: 'New Org' };
+            mockResponses = [[newOrg]]; // For insert().returning()
+
+            const result = await service.create(createData, mockUser as any);
+
+            expect(result.id).toBe('new-org-id');
+            expect(mockDatabase.insert).toHaveBeenCalled();
+            expect(mockDatabase.update).toHaveBeenCalled();
+            expect(mockSetupService.createDefaultSetup).toHaveBeenCalledWith(expect.anything(), 'new-org-id', 'New Org');
+        });
     });
 
     describe('update', () => {

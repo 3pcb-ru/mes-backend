@@ -3,8 +3,9 @@ import { eq } from 'drizzle-orm';
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 import { AttachmentService } from '../attachments/attachment.service';
-import { UpdateOrganizationDto } from './organization.dto';
+import { CreateOrganizationDto, UpdateOrganizationDto } from './organization.dto';
 import { JwtUser } from '@/types/jwt.types';
+import { SetupService } from '../node/setup.service';
 
 @Injectable()
 export class OrganizationService {
@@ -13,8 +14,35 @@ export class OrganizationService {
     constructor(
         private readonly drizzle: DrizzleService,
         private readonly attachmentService: AttachmentService,
+        private readonly setupService: SetupService,
     ) {
         this.db = this.drizzle.database;
+    }
+
+    async create(data: CreateOrganizationDto, user: JwtUser) {
+        const organizationRecord = await this.db.transaction(async (tx) => {
+            // 1. Create the organization
+            const [org] = await tx
+                .insert(Schema.organization)
+                .values({
+                    name: data.name,
+                    timezone: data.timezone ?? 'UTC',
+                })
+                .returning();
+
+            // 2. Link the user to the organization
+            await tx
+                .update(Schema.user)
+                .set({ organizationId: org.id })
+                .where(eq(Schema.user.id, user.id));
+
+            // 3. Create default setup (nodes, etc.)
+            await this.setupService.createDefaultSetup(tx, org.id, data.name);
+
+            return org;
+        });
+
+        return organizationRecord;
     }
 
     async update(organizationId: string, data: UpdateOrganizationDto, user: JwtUser) {
