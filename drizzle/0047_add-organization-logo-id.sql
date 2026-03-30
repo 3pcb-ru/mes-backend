@@ -1,0 +1,2 @@
+ALTER TABLE "factories" ADD COLUMN "logo_id" uuid;--> statement-breakpoint
+ALTER TABLE "factories" ADD CONSTRAINT "factories_logo_id_attachments_id_fk" FOREIGN KEY ("logo_id") REFERENCES "public"."attachments"("id") ON DELETE no action ON UPDATE no action;

@@ -330,6 +330,13 @@
       "when": 1774609490559,
       "tag": "0046_nostalgic_red_wolf",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1774863716191,
+      "tag": "0047_add-organization-logo-id",
+      "breakpoints": true
     }
   ]
 }
