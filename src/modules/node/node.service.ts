@@ -1,5 +1,6 @@
+import * as crypto from 'crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { eq, getTableColumns } from 'drizzle-orm';
+import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm';
 
 import { PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
 import { BaseFilterableService } from '@/common/services/base-filterable.service';
@@ -36,16 +37,19 @@ export class NodeService extends BaseFilterableService {
     }
 
     async create(organizationId: string, payload: CreateNodeDto) {
-        // Warning: Simplified ltree path logic for scoping.
-        let path = `root_${Date.now()}`;
+        const id = crypto.randomUUID();
+        const segment = id.replace(/-/g, '_');
+
+        let path = `root_${segment}`;
         if (payload.parentId) {
             const parent = await this.findOne(payload.parentId);
-            path = `${parent.path}.${Date.now()}`;
+            path = `${parent.path}.${segment}`;
         }
 
         const [node] = await this.db
             .insert(Schema.nodes)
             .values({
+                id,
                 organizationId,
                 name: payload.name,
                 definitionId: payload.definitionId,
@@ -66,7 +70,7 @@ export class NodeService extends BaseFilterableService {
         return node;
     }
 
-    async update(id: string, payload: Record<string, any>) {
+    async update(id: string, payload: Record<string, unknown>) {
         const [updated] = await this.db
             .update(Schema.nodes)
             .set({
@@ -114,6 +118,77 @@ export class NodeService extends BaseFilterableService {
             });
 
             return updated;
+        });
+    }
+
+    async move(id: string, newParentId: string | null) {
+        return await this.db.transaction(async (tx) => {
+            const node = await this.findOne(id);
+
+            const segment = node.id.replace(/-/g, '_');
+            let newPath = `root_${segment}`;
+            if (newParentId) {
+                const parent = await tx.select().from(Schema.nodes).where(eq(Schema.nodes.id, newParentId)).limit(1);
+                if (!parent[0]) throw new NotFoundException('Parent node not found');
+                newPath = `${parent[0].path}.${segment}`;
+            }
+
+            // Update the node itself
+            const [updated] = await tx
+                .update(Schema.nodes)
+                .set({
+                    parentId: newParentId,
+                    path: newPath,
+                    updatedAt: new Date(),
+                })
+                .where(eq(Schema.nodes.id, id))
+                .returning();
+
+            // Update all descendants' paths using ltree functions
+            await tx.execute(sql`
+                UPDATE nodes 
+                SET path = ${newPath} || subpath(path, nlevel(${node.path}))
+                WHERE path <@ ${node.path} AND id != ${id}
+            `);
+
+            return updated;
+        });
+    }
+
+    async delete(id: string) {
+        return await this.db.transaction(async (tx) => {
+            const node = await this.findOne(id);
+
+            // 1. Check for children
+            const children = await tx.select().from(Schema.nodes).where(and(eq(Schema.nodes.parentId, id), isNull(Schema.nodes.deletedAt))).limit(1);
+            if (children.length > 0) {
+                throw new Error('Cannot delete node with active children. Move or delete children first.');
+            }
+
+            // 2. Check for active execution jobs
+            const jobs = await tx.select().from(Schema.executionJobs).where(eq(Schema.executionJobs.nodeId, id)).limit(1);
+            if (jobs.length > 0) {
+                throw new Error('Cannot delete node referenced in execution jobs.');
+            }
+
+            // 3. Check for activity logs to decide Hard vs Soft delete
+            const logs = await tx.select().from(Schema.activityLogs).where(eq(Schema.activityLogs.nodeId, id)).limit(1);
+
+            if (logs.length === 0 && node.status === 'IDLE') {
+                // Hard Delete
+                await tx.delete(Schema.nodes).where(eq(Schema.nodes.id, id));
+                return { message: 'Node hard-deleted successfully', type: 'hard' };
+            } else {
+                // Soft Delete
+                await tx
+                    .update(Schema.nodes)
+                    .set({
+                        deletedAt: new Date(),
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(Schema.nodes.id, id));
+                return { message: 'Node archived successfully', type: 'soft' };
+            }
         });
     }
 }

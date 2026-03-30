@@ -4,7 +4,7 @@ import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { flattenPermissions } from '@/utils';
 import { permissions as permissionSchema } from '@/models/schema/permissions.schema';
 import { roles as roleSchema, rolePermissions as rolePermissionsSchema } from '@/models/schema/roles.schema';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { Permission } from '@/types';
 import { PermissionDescriptions, Permissions } from '@/common/permissions';
 import { RolesService } from '@/modules/roles/roles.service';
@@ -111,8 +111,22 @@ export class PermissionSeederService implements OnModuleInit {
             }
 
             if (authenticatedRole) {
-                // Authenticated has NONE by default → ensure no auto-assign
-                this.logger.log('ℹ️ Authenticated role ensured (no permissions assigned)');
+                // Assign organizations.update permission to Authenticated role
+                const updateOrgPerm = allPerms.find((p) => p.name === Permissions.organizations.Update);
+                if (updateOrgPerm) {
+                    const existingMapping = await tx.query.rolePermissions.findFirst({
+                        where: and(eq(rolePermissionsSchema.roleId, authenticatedRole.id), eq(rolePermissionsSchema.permissionId, updateOrgPerm.id)),
+                    });
+
+                    if (!existingMapping) {
+                        await tx.insert(rolePermissionsSchema).values({
+                            roleId: authenticatedRole.id,
+                            permissionId: updateOrgPerm.id,
+                        });
+                        this.logger.log('✅ Added organizations.update permission to Authenticated role');
+                    }
+                }
+                this.logger.log('ℹ️ Authenticated role logic completed');
             }
             this.logger.log(`Permissions in DB now: ${canonicalPermissions.length}`);
             this.logger.log(`Roles in DB: ${allRoles.length}`);

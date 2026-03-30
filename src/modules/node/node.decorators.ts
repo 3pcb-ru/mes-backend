@@ -36,4 +36,20 @@ export const NodeDecorators = {
             ApiResponse({ status: 200, description: 'Node updated successfully' }),
             ApiResponse({ status: 404, description: 'Node not found' }),
         ),
+
+    move: () =>
+        applyDecorators(
+            ApiOperation({ summary: 'Move node to a new parent' }),
+            ApiResponse({ status: 200, description: 'Node moved successfully' }),
+            ApiResponse({ status: 400, description: 'Bad Request' }),
+            ApiResponse({ status: 404, description: 'Node or parent not found' }),
+        ),
+
+    delete: () =>
+        applyDecorators(
+            ApiOperation({ summary: 'Delete or archive a node' }),
+            ApiResponse({ status: 200, description: 'Node deleted or archived successfully' }),
+            ApiResponse({ status: 400, description: 'Bad Request - node has children or active jobs' }),
+            ApiResponse({ status: 404, description: 'Node not found' }),
+        ),
 };

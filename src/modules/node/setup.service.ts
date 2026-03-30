@@ -10,6 +10,7 @@ export class SetupService {
             .values({
                 organizationId,
                 name: 'Facility',
+                type: 'FACILITY',
                 attributeSchema: {},
                 supportedActions: [],
             })
@@ -20,6 +21,7 @@ export class SetupService {
             .values({
                 organizationId,
                 name: 'Work Center',
+                type: 'PRODUCTION',
                 attributeSchema: {},
                 supportedActions: [],
             })
@@ -30,6 +32,7 @@ export class SetupService {
             .values({
                 organizationId,
                 name: 'Work Station',
+                type: 'PRODUCTION',
                 attributeSchema: {},
                 supportedActions: [],
             })

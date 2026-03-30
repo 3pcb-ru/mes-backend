@@ -1,9 +1,10 @@
 import { z } from 'zod';
-import { ticketMessageInsertSchema, ticketMessagesSelectSchema, ticketSelectSchema } from '@/models/zod-schemas';
+
+import { MIME_TYPE } from '@/app/services/storage/storage.interface';
 import { MESSAGE_TYPE } from '@/common/enums';
 import { createApiResponseDto } from '@/common/helpers/api-response';
 import { createStrictZodDto } from '@/common/helpers/zod-strict';
-import { MIME_TYPE } from '@/app/services/storage/storage.interface';
+import { ticketMessageInsertSchema, ticketMessagesSelectSchema, ticketSelectSchema } from '@/models/zod-schemas';
 
 export const createTicketMessageSchema = ticketMessageInsertSchema
     .omit({
@@ -16,14 +17,17 @@ export const createTicketMessageSchema = ticketMessageInsertSchema
     })
     .extend({
         content: z.string().refine((s) => !/[<>]/.test(s), { message: 'Content must not contain HTML tags' }),
-        senderId: z.uuid().optional(),
+        senderId: z.uuid({ version: 'v4' }).optional(),
         isInternal: z.boolean().optional().default(false),
         metadata: z
             .string()
             .optional()
             .refine((s) => !/[<>]/.test(s!), { message: 'metadata must not contain HTML tags' }),
         messageType: z.enum(MESSAGE_TYPE),
-        attachmentIds: z.array(z.uuid()).optional().default([]),
+        attachmentIds: z
+            .array(z.uuid({ version: 'v4' }))
+            .optional()
+            .default([]),
     });
 
 export const ticketWithMessagesSchema = ticketSelectSchema.extend({
@@ -75,8 +79,8 @@ const updateConsentSchema = z.object({
 });
 
 //Input DTO's
-export class CreateTicketMessageDto extends createStrictZodDto(createTicketMessageSchema) { }
-export class UpdateConsentDto extends createStrictZodDto(updateConsentSchema) { }
+export class CreateTicketMessageDto extends createStrictZodDto(createTicketMessageSchema) {}
+export class UpdateConsentDto extends createStrictZodDto(updateConsentSchema) {}
 
 //Response DTO's
-export class TicketWithMessagesApiResponseDto extends createApiResponseDto(ticketWithMessagesSchema) { }
+export class TicketWithMessagesApiResponseDto extends createApiResponseDto(ticketWithMessagesSchema) {}

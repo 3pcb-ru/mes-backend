@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Request, UseGuards } from '@nestjs/common';
 
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { JwtUser } from '@/types/jwt.types';
@@ -44,7 +44,19 @@ export class NodeController {
 
     @Put(':id')
     @NodeDecorators.update()
-    async update(@Param('id') id: string, @Body() payload: Record<string, any>) {
+    async update(@Param('id') id: string, @Body() payload: Record<string, unknown>) {
         return ok(await this.nodeService.update(id, payload));
+    }
+
+    @Patch(':id/move')
+    @NodeDecorators.move()
+    async move(@Param('id') id: string, @Body() body: { parentId: string | null }) {
+        return ok(await this.nodeService.move(id, body.parentId));
+    }
+
+    @Delete(':id')
+    @NodeDecorators.delete()
+    async delete(@Param('id') id: string) {
+        return ok(await this.nodeService.delete(id));
     }
 }

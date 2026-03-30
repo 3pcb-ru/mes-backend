@@ -1,11 +1,13 @@
 import { createZodDto } from 'nestjs-zod';
-import { createStrictZodDto } from '@/common/helpers/zod-strict';
 import { z } from 'zod';
-import { ticketInsertSchema, ticketSelectSchema } from '@/models/zod-schemas';
-import { createApiResponseDto, createApiPaginatedResponseDto } from '@/common/helpers/api-response';
-import { createTicketMessageSchema } from './ticket-messages.dto';
-import { NAME_PATTERN, validateText } from '@/common/helpers/validations';
+
 import { TICKET_STATUS } from '@/common/enums';
+import { createApiPaginatedResponseDto, createApiResponseDto } from '@/common/helpers/api-response';
+import { NAME_PATTERN, validateText } from '@/common/helpers/validations';
+import { createStrictZodDto } from '@/common/helpers/zod-strict';
+import { ticketInsertSchema, ticketSelectSchema } from '@/models/zod-schemas';
+
+import { createTicketMessageSchema } from './ticket-messages.dto';
 
 const createTicketSchema = ticketInsertSchema
     .omit({
@@ -18,7 +20,7 @@ const createTicketSchema = ticketInsertSchema
         lastMessageAt: true, // Set when messages are added
     })
     .extend({
-        orderId: z.uuid().optional(),
+        orderId: z.uuid({ version: 'v4' }).optional(),
         name: validateText({ regex: { pattern: NAME_PATTERN, error: 'Name can only contain alphabets, spaces, apostrophes, or hyphens' }, min: 2, max: 100, isOptional: true }),
         email: z.email('Please enter a valid email address').transform((s) => s?.trim()?.toLowerCase()),
         company: validateText({ isOptional: true }),
@@ -36,7 +38,7 @@ export const createTicketRequestSchema = createTicketSchema.extend({
 const ticketWithUserSchema = ticketSelectSchema.extend({
     user: z
         .object({
-            id: z.uuid(),
+            id: z.uuid({ version: 'v4' }),
             email: z.email(),
             firstName: z.string().nullable(),
             lastName: z.string().nullable(),

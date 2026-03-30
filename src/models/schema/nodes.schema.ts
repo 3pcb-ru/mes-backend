@@ -15,12 +15,22 @@ export const nodeStatusChangeReasonEnum = pgEnum('node_status_change_reason_enum
     'OTHER',
 ]);
 
+export const nodeTypeEnum = pgEnum('node_type_enum', [
+    'PRODUCTION',
+    'WAREHOUSE',
+    'LOGISTICS',
+    'FACILITY',
+    'QUALITY',
+    'OTHER',
+]);
+
 export const nodeDefinitions = pgTable('node_definitions', {
     id: uuid('id').primaryKey().defaultRandom(),
     organizationId: uuid('factory_id').references(() => organization.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
+    type: nodeTypeEnum('type').notNull().default('OTHER'),
     attributeSchema: jsonb('attribute_schema'),
-    supportedActions: jsonb('supported_actions').$type<Array<{ action: string; params?: any }>>(),
+    supportedActions: jsonb('supported_actions').$type<Array<{ action: string; params?: unknown }>>(),
     createdAt: timestamp('_created', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('_updated', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -39,6 +49,7 @@ export const nodes = pgTable(
         attributes: jsonb('attributes'),
         createdAt: timestamp('_created', { withTimezone: true }).notNull().defaultNow(),
         updatedAt: timestamp('_updated', { withTimezone: true }).notNull().defaultNow(),
+        deletedAt: timestamp('_deleted', { withTimezone: true }),
     },
     (t) => ({
         pathIdx: index('node_path_idx').on(t.path),

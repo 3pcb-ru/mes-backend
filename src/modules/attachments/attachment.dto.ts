@@ -1,11 +1,11 @@
 import { createZodDto } from 'nestjs-zod';
-import { createStrictZodDto } from '@/common/helpers/zod-strict';
 import { z } from 'zod';
-import { standardTimestampPreprocessOverrides } from '@/common/helpers/drizzle-zod-date';
-import { attachmentInsertSchema, attachmentSelectSchema, attachmentUpdateSchema } from '@/models/zod-schemas';
 
-import { createApiPaginatedResponseSchema, createApiResponseSchema } from '@/common/helpers/api-response';
 import { FILE_TYPE } from '@/common/enums';
+import { createApiPaginatedResponseSchema, createApiResponseSchema } from '@/common/helpers/api-response';
+import { standardTimestampPreprocessOverrides } from '@/common/helpers/drizzle-zod-date';
+import { createStrictZodDto } from '@/common/helpers/zod-strict';
+import { attachmentInsertSchema, attachmentSelectSchema, attachmentUpdateSchema } from '@/models/zod-schemas';
 
 //Input Schemas
 const uploadAttachmentSchema = z
@@ -38,7 +38,7 @@ const updateAttachmentSchema = attachmentUpdateSchema.omit({
 //Output Schemas
 
 const uploadAttachmentResponseSchema = z.object({
-    attachmentId: z.uuid(),
+    attachmentId: z.uuid({ version: 'v4' }),
     url: z.url(),
     expiresAt: standardTimestampPreprocessOverrides.expiresAt,
 });

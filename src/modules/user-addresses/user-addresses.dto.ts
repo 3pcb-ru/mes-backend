@@ -1,9 +1,10 @@
-import { createStrictZodDto } from '@/common/helpers/zod-strict';
 import { z } from 'zod';
-import { userAddressInsertSchema, userAddressUpdateSchema, userAddressSelectSchema } from '@/models/zod-schemas';
-import { createApiPaginatedResponseDto, createApiResponseDto } from '@/common/helpers/api-response';
-import { validateText, validatePostalCode, NAME_PATTERN } from '@/common/helpers/validations';
+
 import { DEFAULT_CHAR_LENGTH } from '@/common/constants';
+import { createApiPaginatedResponseDto, createApiResponseDto } from '@/common/helpers/api-response';
+import { NAME_PATTERN, validatePostalCode, validateText } from '@/common/helpers/validations';
+import { createStrictZodDto } from '@/common/helpers/zod-strict';
+import { userAddressInsertSchema, userAddressSelectSchema, userAddressUpdateSchema } from '@/models/zod-schemas';
 
 const nameRegex = { pattern: NAME_PATTERN, error: 'Value can only contain alphabets, spaces, apostrophes, or hyphens' };
 const phoneNumberRegex = { pattern: /^\+?[0-9\s\-()]{7,20}$/, error: 'Phone number must be 7–20 digits and may include spaces, hyphens, parentheses, and may start with +' };
@@ -51,8 +52,8 @@ const updateUserAddressSchema = userAddressUpdateSchema
     .extend({});
 
 const updateDefaultAddressSchema = z.object({
-    addressId: z.uuid(),
-    userId: z.uuid(),
+    addressId: z.uuid({ version: 'v4' }),
+    userId: z.uuid({ version: 'v4' }),
 });
 
 const listAddressQuerySchema = z.object({
@@ -61,13 +62,13 @@ const listAddressQuerySchema = z.object({
 });
 
 // Input DTO's
-export class CreateUserAddressDto extends createStrictZodDto(createUserAddressSchema) { }
-export class UpdateUserAddressDto extends createStrictZodDto(updateUserAddressSchema) { }
-export class updateDefaultAddressDto extends createStrictZodDto(updateDefaultAddressSchema) { }
+export class CreateUserAddressDto extends createStrictZodDto(createUserAddressSchema) {}
+export class UpdateUserAddressDto extends createStrictZodDto(updateUserAddressSchema) {}
+export class updateDefaultAddressDto extends createStrictZodDto(updateDefaultAddressSchema) {}
 
 //Response DTO's
-export class AddressResponseDto extends createStrictZodDto(userAddressSelectSchema) { }
-export class ListAddressQueryDto extends createStrictZodDto(listAddressQuerySchema) { }
+export class AddressResponseDto extends createStrictZodDto(userAddressSelectSchema) {}
+export class ListAddressQueryDto extends createStrictZodDto(listAddressQuerySchema) {}
 
-export class AddressApiResponseDto extends createApiResponseDto(userAddressSelectSchema) { }
-export class AddressPaginatedApiResponseDto extends createApiPaginatedResponseDto(userAddressSelectSchema) { }
+export class AddressApiResponseDto extends createApiResponseDto(userAddressSelectSchema) {}
+export class AddressPaginatedApiResponseDto extends createApiPaginatedResponseDto(userAddressSelectSchema) {}

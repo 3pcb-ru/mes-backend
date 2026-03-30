@@ -14,19 +14,19 @@
 // - Types updated for Zod v4 (no 'strip' generic on ZodObject).
 
 import {
-    isTable,
+    Column,
     getTableColumns,
     getViewSelectedFields,
     is,
-    Column,
-    SQL,
+    isTable,
     isView,
+    SQL,
     type Assume,
+    type DrizzleTypeError,
     type SelectedFieldsFlat,
     type Simplify,
     type Table,
     type View,
-    type DrizzleTypeError,
 } from 'drizzle-orm';
 import type { PgEnum } from 'drizzle-orm/pg-core';
 import * as zDefault from 'zod';
@@ -228,7 +228,7 @@ function stringColumnToSchema(column: Column, z: typeof zDefault, coerce: Create
     // UUID (prefer top-level Zod v4 API)
     if (isColumnType(column, ['PgUUID'])) {
         const top = (z as any).uuid;
-        return typeof top === 'function' ? top() : z.string().uuid();
+        return typeof top === 'function' ? top() : z.uuid({ version: 'v4' });
     }
 
     let max: number | undefined;
@@ -428,14 +428,14 @@ export type ArrayHasAtLeastOneValue<TEnum extends readonly [any, ...any[]] | und
 export type ColumnIsGeneratedAlwaysAs<TColumn extends Column> = TColumn['_']['identity'] extends 'always'
     ? true
     : TColumn['_']['generated'] extends undefined
-    ? false
-    : TColumn['_']['generated'] extends infer TGenerated extends {
-        type: string;
-    }
-    ? TGenerated['type'] extends 'byDefault'
-    ? false
-    : true
-    : true;
+      ? false
+      : TColumn['_']['generated'] extends infer TGenerated extends {
+              type: string;
+          }
+        ? TGenerated['type'] extends 'byDefault'
+            ? false
+            : true
+        : true;
 
 export type RemoveNever<T> = {
     [K in keyof T as T[K] extends never ? never : K]: T[K];
@@ -445,16 +445,16 @@ export type GetSelection<T extends SelectedFieldsFlat<Column> | Table | View> = 
 
 export type GetEnumValuesFromColumn<TColumn extends Column> = TColumn['_'] extends { enumValues: infer TVals }
     ? TVals extends readonly [infer E, ...infer _R]
-    ? E extends string
-    ? TVals
-    : undefined
-    : undefined
+        ? E extends string
+            ? TVals
+            : undefined
+        : undefined
     : undefined;
 
 export type GetBaseColumn<TColumn extends Column> = TColumn['_'] extends { baseColumn: Column | never | undefined }
     ? IsNever<TColumn['_']['baseColumn']> extends false
-    ? TColumn['_']['baseColumn']
-    : undefined
+        ? TColumn['_']['baseColumn']
+        : undefined
     : undefined;
 
 export type GetZodType<
@@ -465,104 +465,104 @@ export type GetZodType<
     TBaseColumn extends Column | undefined,
 > = TBaseColumn extends Column
     ? zDefault.ZodArray<
-        GetZodType<TBaseColumn['_']['data'], TBaseColumn['_']['dataType'], TBaseColumn['_']['columnType'], GetEnumValuesFromColumn<TBaseColumn>, GetBaseColumn<TBaseColumn>>
-    >
+          GetZodType<TBaseColumn['_']['data'], TBaseColumn['_']['dataType'], TBaseColumn['_']['columnType'], GetEnumValuesFromColumn<TBaseColumn>, GetBaseColumn<TBaseColumn>>
+      >
     : ArrayHasAtLeastOneValue<TEnumValues> extends true
-    ? zDefault.ZodType<TData>
-    : TData extends infer TTuple extends [any, ...any[]]
-    ? zDefault.ZodTuple<
-        Assume<
-            {
-                [K in keyof TTuple]: GetZodType<TTuple[K], string, string, undefined, undefined>;
-            },
-            [any, ...any[]]
-        >
-    >
-    : TData extends Date
-    ? zDefault.ZodDate
-    : TData extends Buffer
-    ? zDefault.ZodType<Buffer>
-    : TDataType extends 'array'
-    ? zDefault.ZodArray<GetZodType<Assume<TData, any[]>[number], string, string, undefined, undefined>>
-    : TData extends infer TDict extends Record<string, any>
-    ? TColumnType extends 'PgJson' | 'PgJsonb' | 'MySqlJson' | 'SingleStoreJson' | 'SQLiteTextJson' | 'SQLiteBlobJson'
-    // @ts-ignore
-    ? zDefault.ZodType<TDict, any, TDict>
-    : zDefault.ZodObject<{
-        [K in keyof TDict]: GetZodType<TDict[K], string, string, undefined, undefined>;
-    }>
-    : TDataType extends 'json'
-    ? zDefault.ZodType<Json>
-    : TData extends number
-    ? zDefault.ZodNumber
-    : TData extends bigint
-    ? zDefault.ZodBigInt
-    : TData extends boolean
-    ? zDefault.ZodBoolean
-    : TData extends string
-    ? zDefault.ZodString
-    : zDefault.ZodTypeAny;
+      ? zDefault.ZodType<TData>
+      : TData extends infer TTuple extends [any, ...any[]]
+        ? zDefault.ZodTuple<
+              Assume<
+                  {
+                      [K in keyof TTuple]: GetZodType<TTuple[K], string, string, undefined, undefined>;
+                  },
+                  [any, ...any[]]
+              >
+          >
+        : TData extends Date
+          ? zDefault.ZodDate
+          : TData extends Buffer
+            ? zDefault.ZodType<Buffer>
+            : TDataType extends 'array'
+              ? zDefault.ZodArray<GetZodType<Assume<TData, any[]>[number], string, string, undefined, undefined>>
+              : TData extends infer TDict extends Record<string, any>
+                ? TColumnType extends 'PgJson' | 'PgJsonb' | 'MySqlJson' | 'SingleStoreJson' | 'SQLiteTextJson' | 'SQLiteBlobJson'
+                    ? // @ts-ignore
+                      zDefault.ZodType<TDict, any, TDict>
+                    : zDefault.ZodObject<{
+                          [K in keyof TDict]: GetZodType<TDict[K], string, string, undefined, undefined>;
+                      }>
+                : TDataType extends 'json'
+                  ? zDefault.ZodType<Json>
+                  : TData extends number
+                    ? zDefault.ZodNumber
+                    : TData extends bigint
+                      ? zDefault.ZodBigInt
+                      : TData extends boolean
+                        ? zDefault.ZodBoolean
+                        : TData extends string
+                          ? zDefault.ZodString
+                          : zDefault.ZodTypeAny;
 
 type HandleSelectColumn<TSchema extends zDefault.ZodTypeAny, TColumn extends Column> = TColumn['_']['notNull'] extends true ? TSchema : zDefault.ZodNullable<TSchema>;
 
 type HandleInsertColumn<TSchema extends zDefault.ZodTypeAny, TColumn extends Column> =
     ColumnIsGeneratedAlwaysAs<TColumn> extends true
-    ? never
-    : TColumn['_']['notNull'] extends true
-    ? TColumn['_']['hasDefault'] extends true
-    ? zDefault.ZodOptional<TSchema>
-    : TSchema
-    : zDefault.ZodOptional<zDefault.ZodNullable<TSchema>>;
+        ? never
+        : TColumn['_']['notNull'] extends true
+          ? TColumn['_']['hasDefault'] extends true
+              ? zDefault.ZodOptional<TSchema>
+              : TSchema
+          : zDefault.ZodOptional<zDefault.ZodNullable<TSchema>>;
 
 type HandleUpdateColumn<TSchema extends zDefault.ZodTypeAny, TColumn extends Column> =
     ColumnIsGeneratedAlwaysAs<TColumn> extends true
-    ? never
-    : TColumn['_']['notNull'] extends true
-    ? zDefault.ZodOptional<TSchema>
-    : zDefault.ZodOptional<zDefault.ZodNullable<TSchema>>;
+        ? never
+        : TColumn['_']['notNull'] extends true
+          ? zDefault.ZodOptional<TSchema>
+          : zDefault.ZodOptional<zDefault.ZodNullable<TSchema>>;
 
 export type HandleColumn<TType extends 'select' | 'insert' | 'update', TColumn extends Column> =
     GetZodType<TColumn['_']['data'], TColumn['_']['dataType'], TColumn['_']['columnType'], GetEnumValuesFromColumn<TColumn>, GetBaseColumn<TColumn>> extends infer TSchema extends
-    zDefault.ZodTypeAny
-    ? TSchema extends zDefault.ZodAny
-    ? zDefault.ZodAny
-    : TType extends 'select'
-    ? HandleSelectColumn<TSchema, TColumn>
-    : TType extends 'insert'
-    ? HandleInsertColumn<TSchema, TColumn>
-    : TType extends 'update'
-    ? HandleUpdateColumn<TSchema, TColumn>
-    : TSchema
-    : zDefault.ZodAny;
+        zDefault.ZodTypeAny
+        ? TSchema extends zDefault.ZodAny
+            ? zDefault.ZodAny
+            : TType extends 'select'
+              ? HandleSelectColumn<TSchema, TColumn>
+              : TType extends 'insert'
+                ? HandleInsertColumn<TSchema, TColumn>
+                : TType extends 'update'
+                  ? HandleUpdateColumn<TSchema, TColumn>
+                  : TSchema
+        : zDefault.ZodAny;
 
 export type BuildRefineColumns<TColumns extends Record<string, any>> = Simplify<
     RemoveNever<{
         [K in keyof TColumns]: TColumns[K] extends infer TColumn extends Column
-        ? GetZodType<
-            TColumn['_']['data'],
-            TColumn['_']['dataType'],
-            TColumn['_']['columnType'],
-            GetEnumValuesFromColumn<TColumn>,
-            GetBaseColumn<TColumn>
-        > extends infer TSchema extends zDefault.ZodTypeAny
-        ? TSchema
-        : zDefault.ZodAny
-        : TColumns[K] extends infer TObject extends SelectedFieldsFlat<Column> | Table | View
-        ? BuildRefineColumns<GetSelection<TObject>>
-        : TColumns[K];
+            ? GetZodType<
+                  TColumn['_']['data'],
+                  TColumn['_']['dataType'],
+                  TColumn['_']['columnType'],
+                  GetEnumValuesFromColumn<TColumn>,
+                  GetBaseColumn<TColumn>
+              > extends infer TSchema extends zDefault.ZodTypeAny
+                ? TSchema
+                : zDefault.ZodAny
+            : TColumns[K] extends infer TObject extends SelectedFieldsFlat<Column> | Table | View
+              ? BuildRefineColumns<GetSelection<TObject>>
+              : TColumns[K];
     }>
 >;
 
 export type BuildRefine<TColumns extends Record<string, any>> =
     BuildRefineColumns<TColumns> extends infer TBuildColumns
-    ? {
-        [K in keyof TBuildColumns]?: TBuildColumns[K] extends zDefault.ZodTypeAny
-        ? ((schema: TBuildColumns[K]) => zDefault.ZodTypeAny) | zDefault.ZodTypeAny
-        : TBuildColumns[K] extends Record<string, any>
-        ? Simplify<BuildRefine<TBuildColumns[K]>>
+        ? {
+              [K in keyof TBuildColumns]?: TBuildColumns[K] extends zDefault.ZodTypeAny
+                  ? ((schema: TBuildColumns[K]) => zDefault.ZodTypeAny) | zDefault.ZodTypeAny
+                  : TBuildColumns[K] extends Record<string, any>
+                    ? Simplify<BuildRefine<TBuildColumns[K]>>
+                    : never;
+          }
         : never;
-    }
-    : never;
 
 type HandleRefinement<
     TType extends 'select' | 'insert' | 'update',
@@ -570,16 +570,16 @@ type HandleRefinement<
     TColumn extends Column,
 > = TRefinement extends (schema: any) => zDefault.ZodTypeAny
     ? (TColumn['_']['notNull'] extends true ? ReturnType<TRefinement> : zDefault.ZodNullable<ReturnType<TRefinement>>) extends infer TSchema
-    ? TType extends 'update'
-    ? zDefault.ZodOptional<Assume<TSchema, zDefault.ZodTypeAny>>
-    : TSchema
-    : zDefault.ZodTypeAny
+        ? TType extends 'update'
+            ? zDefault.ZodOptional<Assume<TSchema, zDefault.ZodTypeAny>>
+            : TSchema
+        : zDefault.ZodTypeAny
     : TRefinement;
 
 type IsRefinementDefined<TRefinements, TKey extends string> = TKey extends keyof TRefinements
     ? TRefinements[TKey] extends zDefault.ZodTypeAny | ((schema: any) => any)
-    ? true
-    : false
+        ? true
+        : false
     : false;
 
 export type BuildSchema<
@@ -590,28 +590,28 @@ export type BuildSchema<
     Simplify<
         RemoveNever<{
             [K in keyof TColumns]: TColumns[K] extends infer TColumn extends Column
-            ? TRefinements extends object
-            ? IsRefinementDefined<TRefinements, Assume<K, string>> extends true
-            ? HandleRefinement<TType, TRefinements[Assume<K, keyof TRefinements>], TColumn>
-            : HandleColumn<TType, TColumn>
-            : HandleColumn<TType, TColumn>
-            : TColumns[K] extends infer TObject extends SelectedFieldsFlat<Column> | Table | View
-            ? BuildSchema<
-                TType,
-                GetSelection<TObject>,
-                TRefinements extends object ? (TRefinements[Assume<K, keyof TRefinements>] extends infer TNested extends object ? TNested : undefined) : undefined
-            >
-            : zDefault.ZodAny;
+                ? TRefinements extends object
+                    ? IsRefinementDefined<TRefinements, Assume<K, string>> extends true
+                        ? HandleRefinement<TType, TRefinements[Assume<K, keyof TRefinements>], TColumn>
+                        : HandleColumn<TType, TColumn>
+                    : HandleColumn<TType, TColumn>
+                : TColumns[K] extends infer TObject extends SelectedFieldsFlat<Column> | Table | View
+                  ? BuildSchema<
+                        TType,
+                        GetSelection<TObject>,
+                        TRefinements extends object ? (TRefinements[Assume<K, keyof TRefinements>] extends infer TNested extends object ? TNested : undefined) : undefined
+                    >
+                  : zDefault.ZodAny;
         }>
     >
 >;
 
 export type NoUnknownKeys<TRefinement extends Record<string, any>, TCompare extends Record<string, any>> = {
     [K in keyof TRefinement]: K extends keyof TCompare
-    ? TRefinement[K] extends Record<string, zDefault.ZodTypeAny>
-    ? NoUnknownKeys<TRefinement[K], TCompare[K]>
-    : TRefinement[K]
-    : DrizzleTypeError<`Found unknown key in refinement: "${K & string}"`>;
+        ? TRefinement[K] extends Record<string, zDefault.ZodTypeAny>
+            ? NoUnknownKeys<TRefinement[K], TCompare[K]>
+            : TRefinement[K]
+        : DrizzleTypeError<`Found unknown key in refinement: "${K & string}"`>;
 };
 
 // ---------------------------------------------

@@ -57,6 +57,9 @@ export const Permissions = {
         Update: 'notifications.update',
         Delete: 'notifications.delete',
     },
+    organizations: {
+        Update: 'organizations.update',
+    },
 } as const;
 
 export const PermissionDescriptions: Record<string, string> = {
@@ -123,4 +126,5 @@ export const PermissionDescriptions: Record<string, string> = {
     'notifications.read.all': 'Read all notifications in the system',
     'notifications.update': 'Update own notifications (e.g., mark as read)',
     'notifications.delete': 'Delete own notifications',
+    'organizations.update': 'Update organization information (name, logo, etc.)',
 };
