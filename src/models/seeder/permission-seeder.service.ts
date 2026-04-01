@@ -4,7 +4,7 @@ import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { flattenPermissions } from '@/utils';
 import { permissions as permissionSchema } from '@/models/schema/permissions.schema';
 import { roles as roleSchema, rolePermissions as rolePermissionsSchema } from '@/models/schema/roles.schema';
-import { and, eq, inArray } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { Permission } from '@/types';
 import { PermissionDescriptions, Permissions } from '@/common/permissions';
 import { RolesService } from '@/modules/roles/roles.service';
@@ -111,26 +111,42 @@ export class PermissionSeederService implements OnModuleInit {
             }
 
             if (authenticatedRole) {
-                // Assign organizations.create and Update permissions to Authenticated role
-                const createOrgPerm = allPerms.find((p) => p.name === Permissions.organizations.Create);
-                const updateOrgPerm = allPerms.find((p) => p.name === Permissions.organizations.Update);
-                
-                for (const perm of [createOrgPerm, updateOrgPerm]) {
-                    if (perm) {
-                        const existingMapping = await tx.query.rolePermissions.findFirst({
-                            where: and(eq(rolePermissionsSchema.roleId, authenticatedRole.id), eq(rolePermissionsSchema.permissionId, perm.id)),
-                        });
+                // All baseline permissions every authenticated user should have by default.
+                // This covers their own resources: profile, files, notifications, and org management.
+                const AUTHENTICATED_ROLE_PERMISSIONS: string[] = [
+                    // --- Own user profile ---
+                    Permissions.users.Read,
+                    Permissions.users.Update,
+                    // --- Own attachments (upload, download, delete) ---
+                    Permissions.attachments.Read,
+                    Permissions.attachments.Write,
+                    Permissions.attachments.Update,
+                    Permissions.attachments.Delete,
+                    // --- Own notifications ---
+                    Permissions.notifications.Read,
+                    Permissions.notifications.Update,
+                    Permissions.notifications.Delete,
+                    // --- Organization management ---
+                    Permissions.organizations.Create,
+                    Permissions.organizations.Update,
+                ];
 
-                        if (!existingMapping) {
-                            await tx.insert(rolePermissionsSchema).values({
-                                roleId: authenticatedRole.id,
-                                permissionId: perm.id,
-                            });
-                            this.logger.log(`✅ Added ${perm.name} permission to Authenticated role`);
-                        }
+                const existingAuthMappings = await tx.query.rolePermissions.findMany({
+                    where: eq(rolePermissionsSchema.roleId, authenticatedRole.id),
+                });
+                const existingAuthPermIds = new Set(existingAuthMappings.map((rp) => rp.permissionId));
+
+                for (const permName of AUTHENTICATED_ROLE_PERMISSIONS) {
+                    const perm = allPerms.find((p) => p.name === permName);
+                    if (perm && !existingAuthPermIds.has(perm.id)) {
+                        await tx.insert(rolePermissionsSchema).values({
+                            roleId: authenticatedRole.id,
+                            permissionId: perm.id,
+                        });
+                        this.logger.log(`✅ Added '${perm.name}' to Authenticated role`);
                     }
                 }
-                this.logger.log('ℹ️ Authenticated role logic completed');
+                this.logger.log('ℹ️ Authenticated role permissions synced');
             }
             this.logger.log(`Permissions in DB now: ${canonicalPermissions.length}`);
             this.logger.log(`Roles in DB: ${allRoles.length}`);

@@ -12,9 +12,7 @@ const uploadAttachmentSchema = z
     .object({
         mimeType: z.string().min(1, 'Mime type is required'),
         fileName: z.string().min(1, 'File name is required'),
-        type: z.enum(FILE_TYPE, {
-            message: 'Invalid file type',
-        }),
+        type: z.enum(FILE_TYPE, { message: 'Invalid file type' }),
     })
     .strict();
 

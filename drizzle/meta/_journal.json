@@ -337,6 +337,13 @@
       "when": 1774863716191,
       "tag": "0047_add-organization-logo-id",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1775030883321,
+      "tag": "0048_bored_alex_power",
+      "breakpoints": true
     }
   ]
 }

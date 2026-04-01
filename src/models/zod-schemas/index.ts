@@ -9,7 +9,7 @@ import { tickets } from '@/models/schema/tickets.schema';
 import { userAddress } from '@/models/schema/user-addresses.schema';
 import { user } from '@/models/schema/users.schema';
 
-import { permissions, roles, userSettings } from '../schema';
+import { permissions, roles, userSettings, organization } from '../schema';
 
 // === User Address Schemas ===
 export const userAddressInsertSchema = createInsertSchema(userAddress, standardTimestampInputOverrides);
@@ -57,14 +57,18 @@ export const userUpdateSchema = createUpdateSchema(user, standardTimestampInputO
 // === Permissions Schemas ===
 export const permissionSelectSchema = createSelectSchema(permissions, standardTimestampPreprocessOverrides);
 
+// === Organization Schemas ===
+export const organizationSelectSchema = createSelectSchema(organization, standardTimestampPreprocessOverrides);
+
 // Public user schema (without sensitive fields)
-export const publicUserSelectSchema = userSelectSchema.omit({ password: true, verificationToken: true, deletedAt: true }).extend({ role: roleSelectSchema });
+export const publicUserSelectSchema = userSelectSchema.omit({ password: true, verificationToken: true, deletedAt: true }).extend({ role: roleSelectSchema, organization: organizationSelectSchema.optional().nullable() });
 
 // === Export Types ===
 export type UserInsertInput = z.infer<typeof userInsertSchema>;
 export type UserSelectOutput = z.infer<typeof userSelectSchema>;
 export type UserUpdateInput = z.infer<typeof userUpdateSchema>;
 export type PublicUserOutput = z.infer<typeof publicUserSelectSchema>;
+export type OrganizationSelectOutput = z.infer<typeof organizationSelectSchema>;
 
 // === User Address Schemas ===
 export type UserAddressInsertInput = z.infer<typeof userAddressInsertSchema>;

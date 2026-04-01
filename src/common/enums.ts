@@ -46,14 +46,12 @@ export enum NOTIFICATION_WAY {
     IN_APP = 'in_app',
 }
 
-
 export enum ADJUSTMENT_TYPE {
     PERCENTAGE = 'percentage',
     FIXED = 'fixed',
     QUANTITY = 'quantity',
     BULK = 'bulk',
 }
-
 
 export enum ASSEMBLY_TYPE {
     SINGLE_SIDED = 'single_sided',
@@ -144,7 +142,10 @@ export enum ORDER_EVENT_INFO_TYPE {
     EVIDENCE = 'evidence',
     CANCELLED = 'cancelled',
 }
+
 export enum FILE_TYPE {
+    ORGANIZATION_LOGO = 'organization_logo',
+    USER_AVATAR = 'user_avatar',
     GERBER = 'gerber',
     BOM = 'bom',
     CENTROID = 'centroid',
