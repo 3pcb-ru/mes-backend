@@ -22,7 +22,7 @@ export class UsersController {
         this.logger.setContext(UsersController.name);
     }
 
-    @Get('list')
+    @Get()
     @UsersDecorators('list')
     async list(@Query() filterQuery: PaginatedFilterQueryDto, @CurrentUser() user: JwtUser) {
         const result = await this.usersService.list(filterQuery, user);
