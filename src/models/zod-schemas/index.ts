@@ -58,10 +58,18 @@ export const userUpdateSchema = createUpdateSchema(user, standardTimestampInputO
 export const permissionSelectSchema = createSelectSchema(permissions, standardTimestampPreprocessOverrides);
 
 // === Organization Schemas ===
-export const organizationSelectSchema = createSelectSchema(organization, standardTimestampPreprocessOverrides);
+export const organizationSelectSchema = createSelectSchema(organization, standardTimestampPreprocessOverrides).extend({
+    logoUrl: z.string().optional().nullable(),
+});
 
 // Public user schema (without sensitive fields)
-export const publicUserSelectSchema = userSelectSchema.omit({ password: true, verificationToken: true, deletedAt: true }).extend({ role: roleSelectSchema, organization: organizationSelectSchema.optional().nullable() });
+export const publicUserSelectSchema = userSelectSchema
+    .omit({ password: true, verificationToken: true, deletedAt: true })
+    .extend({
+        role: roleSelectSchema,
+        organization: organizationSelectSchema.optional().nullable(),
+        avatarUrl: z.string().optional().nullable(),
+    });
 
 // === Export Types ===
 export type UserInsertInput = z.infer<typeof userInsertSchema>;

@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 import { AttachmentService } from '../attachments/attachment.service';
@@ -84,6 +84,18 @@ export class OrganizationService {
 
         if (!updatedOrg) {
             throw new NotFoundException('Organization not found');
+        }
+
+        // Populate logoUrl if logoId exists
+        if (updatedOrg.logoId) {
+            const logo = await this.db.query.attachments.findFirst({
+                where: and(eq(Schema.attachments.id, updatedOrg.logoId), eq(Schema.attachments.isUploaded, true)),
+            });
+
+            if (logo) {
+                const objectPath = this.attachmentService.getObjectPath(logo.userId, logo.id, logo.fileName);
+                (updatedOrg as any).logoUrl = await this.attachmentService['storageService'].presignedGetObject(objectPath);
+            }
         }
 
         return updatedOrg;

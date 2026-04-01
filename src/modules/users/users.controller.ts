@@ -37,7 +37,7 @@ export class UsersController {
     @Get('profile')
     @UsersDecorators('profileSelf')
     async getCurrentUser(@CurrentUser() currentUser: JwtUser) {
-        const user = await this.usersService.findOne(currentUser.id);
+        const user = await this.usersService.findOne(currentUser.id, currentUser);
         return ok(user).message('User details fetched successfully.');
     }
     //

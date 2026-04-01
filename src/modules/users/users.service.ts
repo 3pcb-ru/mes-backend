@@ -1,7 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { eq, getTableColumns, sql } from 'drizzle-orm';
+import { ConflictException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { and, desc, eq, getTableColumns, isNull, sql } from 'drizzle-orm';
 
+import { StorageService } from '@/app/services/storage/storage.service';
 import { PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
+import { FILE_TYPE } from '@/common/enums';
 import { BaseFilterableService } from '@/common/services/base-filterable.service';
 import { FilterService } from '@/common/services/filter.service';
 import { DrizzleService } from '@/models/model.service';
@@ -10,6 +12,7 @@ import { UserSettingsOutput, type PublicUserOutput, type UserInsertInput, type U
 import { Pagination } from '@/types';
 import { JwtUser } from '@/types/jwt.types';
 
+import { AttachmentService } from '../attachments/attachment.service';
 import { type UpdateUserProfileDto } from './users.dto';
 import { UsersPolicy } from './users.policy';
 
@@ -20,10 +23,47 @@ export class UsersService extends BaseFilterableService {
 
     constructor(
         private readonly drizzle: DrizzleService,
+        private readonly storageService: StorageService,
+        @Inject(forwardRef(() => AttachmentService))
+        private readonly attachmentService: AttachmentService,
         filterService: FilterService,
     ) {
         super(filterService);
         this.db = this.drizzle.database;
+    }
+
+    private async bindUrls(user: any): Promise<PublicUserOutput> {
+        if (!user) return user;
+
+        // Fetch user avatar
+        const avatar = await this.db.query.attachments.findFirst({
+            where: and(
+                eq(Schema.attachments.userId, user.id),
+                eq(Schema.attachments.type, FILE_TYPE.USER_AVATAR),
+                eq(Schema.attachments.isUploaded, true),
+                isNull(Schema.attachments.deletedAt),
+            ),
+            orderBy: desc(Schema.attachments.createdAt),
+        });
+
+        if (avatar) {
+            const objectName = this.attachmentService.getObjectPath(avatar.userId, avatar.id, avatar.fileName);
+            user.avatarUrl = await this.storageService.presignedGetObject(objectName);
+        }
+
+        // Fetch organization logo if organization exists
+        if (user.organization && user.organization.logoId) {
+            const logo = await this.db.query.attachments.findFirst({
+                where: and(eq(Schema.attachments.id, user.organization.logoId), eq(Schema.attachments.isUploaded, true), isNull(Schema.attachments.deletedAt)),
+            });
+
+            if (logo) {
+                const objectName = this.attachmentService.getObjectPath(logo.userId, logo.id, logo.fileName);
+                user.organization.logoUrl = await this.storageService.presignedGetObject(objectName);
+            }
+        }
+
+        return user;
     }
 
     async create(data: UserInsertInput): Promise<UserSelectOutput> {
@@ -73,7 +113,12 @@ export class UsersService extends BaseFilterableService {
                 organization: getTableColumns(Schema.organization),
             });
 
-        return result;
+        const dataWithUrls = await Promise.all(result.data.map(async (u: any) => await this.bindUrls(u)));
+
+        return {
+            ...result,
+            data: dataWithUrls,
+        };
     }
 
     async findOne(id: string, reqUser?: JwtUser): Promise<PublicUserOutput> {
@@ -89,6 +134,7 @@ export class UsersService extends BaseFilterableService {
                 updatedAt: Schema.user.updatedAt,
                 roleId: Schema.user.roleId,
                 organizationId: Schema.user.organizationId,
+                avatarId: Schema.user.avatarId,
                 role: Schema.roles,
                 organization: Schema.organization,
             })
@@ -98,7 +144,7 @@ export class UsersService extends BaseFilterableService {
             .where(policyWhere)
             .limit(1);
         if (!user) throw new NotFoundException('User not found');
-        return user;
+        return this.bindUrls(user);
     }
 
     async findByEmail(email: string): Promise<UserSelectOutput | null> {
@@ -172,6 +218,7 @@ export class UsersService extends BaseFilterableService {
                     updatedAt: Schema.user.updatedAt,
                     roleId: Schema.user.roleId,
                     organizationId: Schema.user.organizationId,
+                    avatarId: Schema.user.avatarId,
                     role: Schema.roles,
                     organization: Schema.organization,
                 })
@@ -180,7 +227,11 @@ export class UsersService extends BaseFilterableService {
                 .leftJoin(Schema.organization, eq(Schema.user.organizationId, Schema.organization.id))
                 .where(eq(Schema.user.id, id));
 
-            return updatedUser;
+            if (!updatedUser) {
+                throw new NotFoundException('Updated user not found');
+            }
+
+            return this.bindUrls(updatedUser);
         } catch (error) {
             // Re-throw known exceptions
             if (error instanceof NotFoundException || error instanceof ConflictException) {
@@ -188,7 +239,7 @@ export class UsersService extends BaseFilterableService {
             }
 
             // Handle database errors
-            throw new Error(`Failed to update user: ${error.message}`);
+            throw new Error(`Failed to update user: ${error.message}`, { cause: error });
         }
     }
 

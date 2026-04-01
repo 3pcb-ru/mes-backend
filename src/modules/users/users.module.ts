@@ -5,9 +5,12 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { FilterService } from '@/common/services/filter.service';
+import { StorageModule } from '@/app/services/storage/storage.module';
+import { AttachmentModule } from '../attachments/attachment.module';
+import { forwardRef } from '@nestjs/common';
 
 @Module({
-    imports: [DrizzleModule],
+    imports: [DrizzleModule, StorageModule, forwardRef(() => AttachmentModule)],
     controllers: [UsersController],
     providers: [UsersService, FilterService, CustomLoggerService],
     exports: [UsersService],

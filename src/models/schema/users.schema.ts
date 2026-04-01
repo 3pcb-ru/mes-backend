@@ -5,6 +5,7 @@ import { DEFAULT_CHAR_LENGTH } from '@/common/constants';
 
 import { organization } from './organization.schema';
 import { roles as roleSchema } from './roles.schema';
+import { attachments } from './attachments.schema';
 
 export const user = pgTable(
     'users',
@@ -23,6 +24,7 @@ export const user = pgTable(
             .notNull()
             .references(() => roleSchema.id, { onDelete: 'restrict' }),
         organizationId: uuid('factory_id').references(() => organization.id, { onDelete: 'set null' }),
+        avatarId: uuid('avatar_id').references((): any => attachments.id, { onDelete: 'set null' }),
     },
     (table) => [
         // Indexes

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { AttachmentController } from './attachment.controller';
@@ -10,7 +10,7 @@ import { UsersModule } from '../users/users.module';
 import { FilterService } from '@/common/services/filter.service';
 
 @Module({
-    imports: [ConfigModule, StorageModule, UsersModule],
+    imports: [ConfigModule, StorageModule, forwardRef(() => UsersModule)],
     controllers: [AttachmentController],
     providers: [AttachmentService, CustomLoggerService, FilterService],
     exports: [AttachmentService],
