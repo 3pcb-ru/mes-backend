@@ -1,6 +1,7 @@
 import { customType, index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { organization } from './organization.schema';
+import { Json } from '@/types';
 
 const ltree = customType<{ data: string }>({ dataType: () => 'ltree' });
 
@@ -29,7 +30,7 @@ export const nodeDefinitions = pgTable('node_definitions', {
     organizationId: uuid('factory_id').references(() => organization.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     type: nodeTypeEnum('type').notNull().default('OTHER'),
-    attributeSchema: jsonb('attribute_schema'),
+    attributeSchema: jsonb('attribute_schema').$type<Json>(),
     supportedActions: jsonb('supported_actions').$type<Array<{ action: string; params?: unknown }>>(),
     createdAt: timestamp('_created', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('_updated', { withTimezone: true }).notNull().defaultNow(),
@@ -46,7 +47,7 @@ export const nodes = pgTable(
         name: text('name').notNull(),
         capabilities: jsonb('capabilities').$type<string[]>(),
         status: text('status').default('IDLE'),
-        attributes: jsonb('attributes'),
+        attributes: jsonb('attributes').$type<Json>(),
         createdAt: timestamp('_created', { withTimezone: true }).notNull().defaultNow(),
         updatedAt: timestamp('_updated', { withTimezone: true }).notNull().defaultNow(),
         deletedAt: timestamp('_deleted', { withTimezone: true }),

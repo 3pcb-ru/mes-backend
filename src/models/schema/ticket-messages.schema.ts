@@ -4,6 +4,7 @@ import { relations } from 'drizzle-orm';
 import { user } from './users.schema';
 import { MESSAGE_TYPE, SENDER_TYPE } from '@/common/enums';
 import { attachments } from './attachments.schema';
+import { Json } from '@/types';
 
 export const senderTypeEnum = pgEnum('sender_type_enum', [...(Object.values(SENDER_TYPE) as [SENDER_TYPE, ...SENDER_TYPE[]])]);
 export const messageTypeEnum = pgEnum('message_type_enum', [...(Object.values(MESSAGE_TYPE) as [MESSAGE_TYPE, ...MESSAGE_TYPE[]])]);
@@ -17,7 +18,7 @@ export const ticketMessages = pgTable('ticket_messages', {
     senderId: uuid('sender_id').references(() => user.id, { onDelete: 'set null' }),
     senderType: senderTypeEnum('sender_type').default(SENDER_TYPE.USER), // Default to USER
     isInternal: boolean('is_internal').default(false), // Admin-only notes
-    metadata: jsonb('metadata'),
+    metadata: jsonb('metadata').$type<Json>(),
     messageType: messageTypeEnum('message_type').default(MESSAGE_TYPE.MESSAGE), // Default to MESSAGE
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
