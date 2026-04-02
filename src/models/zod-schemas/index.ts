@@ -42,7 +42,7 @@ export const notificationSelectSchema = createSelectSchema(notifications, standa
 export const notificationUpdateSchema = createUpdateSchema(notifications, standardTimestampInputOverrides);
 
 // === Common Utility Schemas ===
-export const uuidSchema = z.uuid('Invalid UUID format');
+export const uuidSchema = z.string().uuid('Invalid UUID format');
 
 // === Roles Schemas ===
 export const roleInsertSchema = createInsertSchema(roles, standardTimestampInputOverrides);

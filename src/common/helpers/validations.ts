@@ -98,3 +98,12 @@ export const resetCodeRegex = { pattern: /^[0-9]{6}$/, error: 'Reset code must b
 export const passwordRegex = { pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, error: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' };
 export const phoneNumberRegex = { pattern: /^\+?[0-9\s\-()]{7,20}$/, error: 'Phone number must be 7–20 digits and may include spaces, hyphens, parentheses, and may start with +' };
 export const nameRegex = { pattern: NAME_PATTERN, error: 'name can only contain alphabets, spaces, apostrophes, or hyphens' };
+
+/**
+ * Project-standard ISO-8601 Date-Time validator using ZodString.
+ * This is used to avoid Swagger crashes caused by ZodDate and deprecation warnings from z.string().datetime().
+ */
+export const isoDateTime = z
+    .string()
+    .describe('ISO-8601 Date String')
+    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/, 'Invalid ISO-8601 date format');

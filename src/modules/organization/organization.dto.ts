@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { createApiResponseSchema } from '@/common/helpers/api-response';
-import { validateText } from '@/common/helpers/validations';
+import { isoDateTime, validateText } from '@/common/helpers/validations';
 import { createStrictZodDto } from '@/common/helpers/zod-strict';
 import { uuidSchema } from '@/models/zod-schemas';
 
@@ -21,12 +21,12 @@ const createOrganizationSchema = z.object({
 
 // Response Schema
 const organizationResponseSchema = z.object({
-    id: z.uuid({ version: 'v4' }),
+    id: z.string().uuid(),
     name: z.string(),
     timezone: z.string(),
-    logoId: z.uuid({ version: 'v4' }).nullable(),
-    createdAt: z.date(),
-    updatedAt: z.date(),
+    logoId: z.string().uuid().nullable(),
+    createdAt: isoDateTime,
+    updatedAt: isoDateTime,
 });
 
 export class UpdateOrganizationDto extends createStrictZodDto(updateOrganizationSchema) {}

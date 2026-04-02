@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isoDateTime } from './validations';
 
 /**
  * Helper for input schemas that need to coerce date strings to Date objects
@@ -12,7 +13,7 @@ export function createTimestampInputOverrides(fieldNames: string[] = []) {
 
     for (const fieldName of allFields) {
         // For inputs, coerce string to Date
-        overrides[fieldName] = z.iso.datetime().optional();
+        overrides[fieldName] = isoDateTime.optional();
     }
 
     return overrides;
@@ -38,7 +39,7 @@ export function createTimestampPreprocessOverrides(fieldNames: string[] = []) {
                 return val.toISOString();
             }
             return val;
-        }, z.iso.datetime().nullable().optional());
+        }, isoDateTime.nullable().optional());
     }
 
     return overrides;
