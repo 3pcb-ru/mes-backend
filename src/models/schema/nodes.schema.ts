@@ -1,6 +1,7 @@
 import { customType, index, jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { organization } from './organization.schema';
+import { user } from './users.schema';
 import { Json } from '@/types';
 
 const ltree = customType<{ data: string }>({ dataType: () => 'ltree' });
@@ -48,6 +49,7 @@ export const nodes = pgTable(
         capabilities: jsonb('capabilities').$type<string[]>(),
         status: text('status').default('IDLE'),
         attributes: jsonb('attributes').$type<Json>(),
+        userId: uuid('user_id').references(() => user.id, { onDelete: 'set null' }),
         createdAt: timestamp('_created', { withTimezone: true }).notNull().defaultNow(),
         updatedAt: timestamp('_updated', { withTimezone: true }).notNull().defaultNow(),
         deletedAt: timestamp('_deleted', { withTimezone: true }),
@@ -55,5 +57,6 @@ export const nodes = pgTable(
     (t) => ({
         pathIdx: index('node_path_idx').on(t.path),
         organizationIdx: index('node_organization_idx').on(t.organizationId),
+        userIdIdx: index('node_user_idx').on(t.userId),
     }),
 );

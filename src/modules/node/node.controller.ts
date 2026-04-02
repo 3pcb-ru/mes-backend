@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Request, UseGuards } from '@nestjs/common';
 
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { JwtUser } from '@/types/jwt.types';
@@ -6,6 +6,7 @@ import { ok } from '@/utils';
 
 import { ChangeNodeStatusDto } from './dto/change-node-status.dto';
 import { CreateNodeDto } from './dto/create-node.dto';
+import { ListNodesDto } from './dto/list-nodes.dto';
 import { NodeService } from './node.service';
 
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
@@ -20,13 +21,14 @@ export class NodeController {
 
     @Get()
     @NodeDecorators.list()
-    async list() {
-        return ok(await this.nodeService.list());
+    async list(@Request() req: { user: JwtUser }, @Query() query: ListNodesDto) {
+        return ok(await this.nodeService.list(query, req.user.organizationId, req.user.id));
     }
 
     @Post()
     @NodeDecorators.create()
     async create(@Request() req: { user: JwtUser }, @Body() payload: CreateNodeDto) {
+        payload.userId = req.user.id;
         return ok(await this.nodeService.create(req.user.organizationId, payload));
     }
 

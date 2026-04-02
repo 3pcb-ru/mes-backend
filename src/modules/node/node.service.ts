@@ -1,14 +1,14 @@
 import * as crypto from 'crypto';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm';
-
-import { PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
 import { BaseFilterableService } from '@/common/services/base-filterable.service';
 import { FilterService } from '@/common/services/filter.service';
+
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 
 import { CreateNodeDto } from './dto/create-node.dto';
+import { ListNodesDto } from './dto/list-nodes.dto';
 
 @Injectable()
 export class NodeService extends BaseFilterableService {
@@ -22,16 +22,31 @@ export class NodeService extends BaseFilterableService {
         this.db = this.drizzle.database;
     }
 
-    async list(query?: PaginatedFilterQueryDto) {
-        const result = await this.filterable(this.db, Schema.nodes, {
+    async list(query?: ListNodesDto, organizationId?: string, userId?: string) {
+        console.info(`[NodeService.list] Org: ${organizationId}, User: ${userId}`, query);
+        let qb = this.filterable(this.db, Schema.nodes, {
             defaultSortColumn: 'createdAt',
         })
+            .join(Schema.nodeDefinitions, eq(Schema.nodes.definitionId, Schema.nodeDefinitions.id), 'left')
             .filter(query || {})
             .orderByFromQuery(query || {}, 'createdAt')
-            .paginate(query || {})
-            .selectFields({
-                ...getTableColumns(Schema.nodes),
-            });
+            .paginate(query || {});
+
+        if (query?.type) {
+            qb = qb.where(eq(Schema.nodeDefinitions.type, query.type as any)); // Using any because of enum mismatch in query vs schema
+        }
+
+        if (organizationId || query?.organizationId) {
+            qb = qb.where(eq(Schema.nodes.organizationId, (organizationId || query?.organizationId) as string));
+        }
+
+        if (userId || query?.userId) {
+            qb = qb.where(eq(Schema.nodes.userId, (userId || query?.userId) as string));
+        }
+
+        const result = await qb.selectFields({
+            ...getTableColumns(Schema.nodes),
+        });
 
         return result;
     }
@@ -58,6 +73,7 @@ export class NodeService extends BaseFilterableService {
                 capabilities: payload.capabilities || [],
                 parentId: payload.parentId,
                 path,
+                userId: payload.userId,
             })
             .returning();
 

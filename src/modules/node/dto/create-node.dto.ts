@@ -14,6 +14,7 @@ const createNodeSchema = z.object({
         .uuid('Invalid parent UUID')
         .optional()
         .or(z.literal('').transform(() => undefined)),
+    userId: z.uuid({ version: 'v4' }).optional(),
 });
 
 export class CreateNodeDto extends createZodDto(createNodeSchema) {}
