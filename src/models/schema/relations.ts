@@ -1,6 +1,7 @@
 import { relations } from 'drizzle-orm';
 
-import { bomItem, bomRevision } from './bom.schema';
+import { bomMaterial, bomRevision } from './bom.schema';
+import { items } from './inventory.schema';
 import { organization } from './organization.schema';
 import { permissions } from './permissions.schema';
 import { product } from './product.schema';
@@ -30,14 +31,30 @@ export const bomRevisionRelations = relations(bomRevision, ({ one, many }) => ({
         fields: [bomRevision.productId],
         references: [product.id],
     }),
-    items: many(bomItem),
+    submittedBy: one(user, {
+        fields: [bomRevision.submittedById],
+        references: [user.id],
+    }),
+    approvedBy: one(user, {
+        fields: [bomRevision.approvedById],
+        references: [user.id],
+    }),
+    baseRevision: one(bomRevision, {
+        fields: [bomRevision.baseRevisionId],
+        references: [bomRevision.id],
+    }),
+    materials: many(bomMaterial),
     workOrders: many(workOrder),
 }));
 
-export const bomItemRelations = relations(bomItem, ({ one }) => ({
+export const bomMaterialRelations = relations(bomMaterial, ({ one }) => ({
     bomRevision: one(bomRevision, {
-        fields: [bomItem.bomRevisionId],
+        fields: [bomMaterial.bomRevisionId],
         references: [bomRevision.id],
+    }),
+    item: one(items, {
+        fields: [bomMaterial.itemId],
+        references: [items.id],
     }),
 }));
 

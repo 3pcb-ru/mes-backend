@@ -25,8 +25,8 @@ export class WorkOrderService {
             throw new NotFoundException('BOM Revision not found');
         }
 
-        if (revision.status !== 'released') {
-            throw new BadRequestException('Work order can only be created from a released BOM revision');
+        if (revision.status !== 'active') {
+            throw new BadRequestException('Work order can only be created from an active BOM revision');
         }
 
         if (targetQuantity <= 0) {

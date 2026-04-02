@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
 
 import { CurrentUser } from '@/common/decorators/user.decorator';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
@@ -9,7 +9,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductService } from './product.service';
 
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ProductDecorators } from './product.decorators';
 
 @ApiTags('Products')
@@ -21,6 +21,7 @@ export class ProductController {
 
     @Get()
     @ProductDecorators.list()
+    @ApiOperation({ summary: 'List all products' })
     async list() {
         const result = await this.svc.list();
         return ok(result);
@@ -28,6 +29,7 @@ export class ProductController {
 
     @Post()
     @ProductDecorators.create()
+    @ApiOperation({ summary: 'Create a new product' })
     async create(@Body() body: CreateProductDto, @CurrentUser() user: JwtUser) {
         if (!user.organizationId) {
             throw new Error('User does not belong to any organization');
@@ -38,6 +40,7 @@ export class ProductController {
 
     @Get(':id')
     @ProductDecorators.findOne()
+    @ApiOperation({ summary: 'Get product details' })
     async get(@Param('id') id: string) {
         const result = await this.svc.findOne(id);
         return ok(result);
@@ -45,11 +48,16 @@ export class ProductController {
 
     @Put(':id')
     @ProductDecorators.update()
-    async update(@Param('id') id: string, @Body() body: UpdateProductDto, @CurrentUser() user: JwtUser) {
-        if (!user.organizationId) {
-            throw new Error('User does not belong to any organization');
-        }
+    @ApiOperation({ summary: 'Update product' })
+    async update(@Param('id') id: string, @Body() body: UpdateProductDto) {
         const result = await this.svc.update(id, body);
+        return ok(result);
+    }
+
+    @Delete(':id')
+    @ApiOperation({ summary: 'Delete product' })
+    async delete(@Param('id') id: string) {
+        const result = await this.svc.delete(id);
         return ok(result);
     }
 }

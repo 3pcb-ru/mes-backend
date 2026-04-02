@@ -1,17 +1,23 @@
-import { pgTable, uuid, varchar, numeric, timestamp, index, pgEnum } from 'drizzle-orm/pg-core';
-import { DEFAULT_CHAR_LENGTH } from '@/common/constants';
+import { pgTable, uuid, varchar, numeric, timestamp, index, pgEnum, jsonb } from 'drizzle-orm/pg-core';
 import { product } from './product.schema';
+import { user } from './users.schema';
+import { items } from './inventory.schema';
 
-export const bomRevisionStatusEnum = pgEnum('bom_revision_status_enum', ['draft', 'released']);
+export const bomRevisionStatusEnum = pgEnum('bom_revision_status_enum', ['draft', 'submitted', 'approved', 'active']);
 
 export const bomRevision = pgTable('bom_revisions', {
     id: uuid('id').defaultRandom().primaryKey(),
     productId: uuid('product_id')
         .notNull()
         .references(() => product.id, { onDelete: 'cascade' }),
-    code: varchar('code', { length: DEFAULT_CHAR_LENGTH }).notNull(),
-    revisionString: varchar('revision_string', { length: 50 }).notNull(),
+    version: varchar('version', { length: 50 }).notNull(),
     status: bomRevisionStatusEnum('status').notNull().default('draft'),
+    submittedById: uuid('submitted_by_id').references(() => user.id),
+    approvedById: uuid('approved_by_id').references(() => user.id),
+    submitDate: timestamp('submit_date', { withTimezone: true }),
+    approveDate: timestamp('approve_date', { withTimezone: true }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    baseRevisionId: uuid('base_revision_id').references((): any => bomRevision.id),
     createdAt: timestamp('_created', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('_updated', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('_deleted', { withTimezone: true }),
@@ -20,17 +26,21 @@ export const bomRevision = pgTable('bom_revisions', {
     index('bom_revision_status_idx').on(table.status),
 ]);
 
-export const bomItem = pgTable('bom_items', {
+export const bomMaterial = pgTable('bom_materials', {
     id: uuid('id').defaultRandom().primaryKey(),
     bomRevisionId: uuid('bom_revision_id')
         .notNull()
         .references(() => bomRevision.id, { onDelete: 'cascade' }),
-    materialName: varchar('material_name', { length: DEFAULT_CHAR_LENGTH }).notNull(),
+    itemId: uuid('item_id')
+        .notNull()
+        .references(() => items.id, { onDelete: 'restrict' }),
+    designators: jsonb('designators').$type<string[]>().default([]),
+    alternatives: jsonb('alternatives').$type<string[]>().default([]),
     quantity: numeric('quantity', { precision: 12, scale: 4 }).notNull(),
     unit: varchar('unit', { length: 20 }).notNull(),
     createdAt: timestamp('_created', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('_updated', { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp('_deleted', { withTimezone: true }),
 }, (table) => [
-    index('bom_item_revision_idx').on(table.bomRevisionId),
+    index('bom_material_revision_idx').on(table.bomRevisionId),
 ]);
