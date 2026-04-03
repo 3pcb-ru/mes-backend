@@ -32,7 +32,7 @@ export class UsersService extends BaseFilterableService {
         this.db = this.drizzle.database;
     }
 
-    private async bindUrls(user: any): Promise<PublicUserOutput> {
+    private async bindUrls(user: any, reqUser?: JwtUser): Promise<PublicUserOutput> {
         if (!user) return user;
 
         // Fetch user avatar
@@ -47,20 +47,12 @@ export class UsersService extends BaseFilterableService {
         });
 
         if (avatar) {
-            const objectName = this.attachmentService.getObjectPath(avatar.userId, avatar.id, avatar.fileName);
-            user.avatarUrl = await this.storageService.presignedGetObject(objectName);
+            user.avatarUrl = await this.attachmentService.getValidPresignedUrl(avatar.id, reqUser as JwtUser);
         }
 
         // Fetch organization logo if organization exists
         if (user.organization && user.organization.logoId) {
-            const logo = await this.db.query.attachments.findFirst({
-                where: and(eq(Schema.attachments.id, user.organization.logoId), eq(Schema.attachments.isUploaded, true), isNull(Schema.attachments.deletedAt)),
-            });
-
-            if (logo) {
-                const objectName = this.attachmentService.getObjectPath(logo.userId, logo.id, logo.fileName);
-                user.organization.logoUrl = await this.storageService.presignedGetObject(objectName);
-            }
+            user.organization.logoUrl = await this.attachmentService.getValidPresignedUrl(user.organization.logoId, reqUser as JwtUser);
         }
 
         return user;
@@ -113,7 +105,7 @@ export class UsersService extends BaseFilterableService {
                 organization: getTableColumns(Schema.organization),
             });
 
-        const dataWithUrls = await Promise.all(result.data.map(async (u: any) => await this.bindUrls(u)));
+        const dataWithUrls = await Promise.all(result.data.map(async (u: any) => await this.bindUrls(u, user)));
 
         return {
             ...result,
@@ -144,7 +136,7 @@ export class UsersService extends BaseFilterableService {
             .where(policyWhere)
             .limit(1);
         if (!user) throw new NotFoundException('User not found');
-        return this.bindUrls(user);
+        return this.bindUrls(user, reqUser);
     }
 
     async findByEmail(email: string): Promise<UserSelectOutput | null> {
@@ -231,7 +223,7 @@ export class UsersService extends BaseFilterableService {
                 throw new NotFoundException('Updated user not found');
             }
 
-            return this.bindUrls(updatedUser);
+            return this.bindUrls(updatedUser, reqUser);
         } catch (error) {
             // Re-throw known exceptions
             if (error instanceof NotFoundException || error instanceof ConflictException) {

@@ -1,7 +1,8 @@
 export const EXPIRE_TIMESTAMP = 24 * 60 * 60; // 24 hours in seconds
 export const REFRESH_TOKEN_EXPIRE_TIMESTAMP = 7 * 24 * 60 * 60; // 7 days in seconds
 
-export const DEFAULT_EXPIRY = 1800; // 30 minutes in seconds
+export const DEFAULT_EXPIRY = 3600; // 1 hour in seconds
+export const AVATAR_EXPIRY = 24 * 3600; // 24 hours in seconds
 
 export const RESET_TOKEN_EXPIRY = 10 * 60; // 10 minutes in seconds
 export const OTP_LENGTH = 6; // Length of OTP codes

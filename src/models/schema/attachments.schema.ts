@@ -21,6 +21,8 @@ export const attachments = pgTable(
         createdAt: timestamp('_created', { withTimezone: true }).notNull().defaultNow(),
         updatedAt: timestamp('_updated', { withTimezone: true }).notNull().defaultNow(),
         deletedAt: timestamp('_deleted', { withTimezone: true }),
+        url: varchar('url', { length: 2048 }),
+        urlExpiresAt: timestamp('url_expires_at', { withTimezone: true }),
     },
     (table) => {
         return [

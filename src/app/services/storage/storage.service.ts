@@ -133,19 +133,19 @@ export class StorageService {
      * @throws {BadRequestException} If object name is empty
      * @throws {InternalServerErrorException} If URL generation fails
      */
-    async presignedGetObject(objectName: string): Promise<string> {
+    async presignedGetObject(objectName: string, expiryInSeconds?: number): Promise<string> {
         await this.ensureInitialized();
 
         try {
             if (!objectName || objectName === '') throw new BadRequestException('Object name is required');
 
-            const { bucketName, expiry } = this.additionalParams;
+            const { bucketName, expiry: defaultExpiry } = this.additionalParams;
             const filename = objectName.split('/').pop();
-            const url = await this.client.presignedGetObject(bucketName, objectName, expiry ?? DEFAULT_EXPIRY, {
+            const url = await this.client.presignedGetObject(bucketName, objectName, expiryInSeconds ?? defaultExpiry ?? DEFAULT_EXPIRY, {
                 'response-content-disposition': `attachment; filename="${filename ?? bucketName}"`,
             });
 
-            this.logger.debug('Generated presigned GET URL', { objectName });
+            this.logger.debug('Generated presigned GET URL', { objectName, expiry: expiryInSeconds ?? defaultExpiry ?? DEFAULT_EXPIRY });
             return url;
         } catch (error) {
             this.logger.error('Failed to generate presigned GET URL:', { objectName, error: error.message });

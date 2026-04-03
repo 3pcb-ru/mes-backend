@@ -5,6 +5,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { StorageService } from '@/app/services/storage/storage.service';
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { MIME_TYPE } from '@/app/services/storage/storage.interface';
+import { AVATAR_EXPIRY, DEFAULT_EXPIRY } from '@/common/constants';
 import { DrizzleService } from '@/models/model.service';
 
 import * as Schema from '@/models/schema/attachments.schema';
@@ -114,24 +115,52 @@ export class AttachmentService extends BaseFilterableService {
     }
 
     async getDownloadUrl(attachmentId: string, user: JwtUser): Promise<{ url: string; attachment: AttachmentSelectOutput }> {
-        const policyWhere = await this.attachmentsPolicy.read(
-            user,
-            eq(Schema.attachments.id, attachmentId),
-            eq(Schema.attachments.isUploaded, true),
-            isNull(Schema.attachments.deletedAt),
-        );
-        const attachment = await this.db.query.attachments.findFirst({
-            where: policyWhere,
-        });
-
-        if (!attachment) throw new NotFoundException('Attachment not found or not uploaded');
-        const objectName = this.getObjectPath(attachment.userId, attachment.id, attachment.fileName);
-        const url = await this.storageService.presignedGetObject(objectName);
+        const url = await this.getValidPresignedUrl(attachmentId, user);
+        const attachment = await this.findOne(attachmentId, user);
 
         return {
             url,
             attachment,
         };
+    }
+
+    /**
+     * Returns a valid presigned URL for an attachment, caching it in the database.
+     * Renews the URL if it's nearing expiry or doesn't exist.
+     */
+    async getValidPresignedUrl(attachmentId: string, user: JwtUser): Promise<string> {
+        const attachment = await this.findOne(attachmentId, user);
+
+        // Determine expiry based on type
+        const isPublicAsset = attachment.type === FILE_TYPE.USER_AVATAR || attachment.type === FILE_TYPE.ORGANIZATION_LOGO;
+        const expiryInSeconds = isPublicAsset ? AVATAR_EXPIRY : DEFAULT_EXPIRY;
+
+        const now = new Date();
+        const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
+
+        // If we have a cached URL that's still valid, return it
+        if (attachment.url && attachment.urlExpiresAt && new Date(attachment.urlExpiresAt).getTime() > now.getTime() + bufferTime) {
+            return attachment.url;
+        }
+
+        // Generate a new URL
+        const objectName = this.getObjectPath(attachment.userId, attachment.id, attachment.fileName);
+        const newUrl = await this.storageService.presignedGetObject(objectName, expiryInSeconds);
+
+        // Calculate new expiration date
+        const newUrlExpiresAt = new Date(now.getTime() + expiryInSeconds * 1000);
+
+        // Update the cache in DB
+        await this.db
+            .update(Schema.attachments)
+            .set({
+                url: newUrl,
+                urlExpiresAt: newUrlExpiresAt,
+                updatedAt: now,
+            })
+            .where(eq(Schema.attachments.id, attachment.id));
+
+        return newUrl;
     }
 
     async list(user: JwtUser, query: PaginatedFilterQueryDto): Promise<{ data: AttachmentSelectOutput[] } & Pagination> {
