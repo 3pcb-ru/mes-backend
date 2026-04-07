@@ -9,6 +9,7 @@ import * as Schema from '@/models/schema';
 
 import { CreateNodeDto } from './dto/create-node.dto';
 import { ListNodesDto } from './dto/list-nodes.dto';
+import { UpdateNodeDto } from './dto/update-node.dto';
 
 @Injectable()
 export class NodeService extends BaseFilterableService {
@@ -33,7 +34,7 @@ export class NodeService extends BaseFilterableService {
             .paginate(query || {});
 
         if (query?.type) {
-            qb = qb.where(eq(Schema.nodeDefinitions.type, query.type as any)); // Using any because of enum mismatch in query vs schema
+            qb = qb.where(eq(Schema.nodeDefinitions.type, query.type as (typeof Schema.nodeTypeEnum.enumValues)[number]));
         }
 
         if (organizationId || query?.organizationId) {
@@ -86,7 +87,7 @@ export class NodeService extends BaseFilterableService {
         return node;
     }
 
-    async update(id: string, payload: Record<string, unknown>) {
+    async update(id: string, payload: UpdateNodeDto) {
         const [updated] = await this.db
             .update(Schema.nodes)
             .set({

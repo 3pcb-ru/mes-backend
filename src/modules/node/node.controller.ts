@@ -7,6 +7,7 @@ import { ok } from '@/utils';
 import { ChangeNodeStatusDto } from './dto/change-node-status.dto';
 import { CreateNodeDto } from './dto/create-node.dto';
 import { ListNodesDto } from './dto/list-nodes.dto';
+import { UpdateNodeDto } from './dto/update-node.dto';
 import { NodeService } from './node.service';
 
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
@@ -46,7 +47,7 @@ export class NodeController {
 
     @Put(':id')
     @NodeDecorators.update()
-    async update(@Param('id') id: string, @Body() payload: Record<string, unknown>) {
+    async update(@Param('id') id: string, @Body() payload: UpdateNodeDto) {
         return ok(await this.nodeService.update(id, payload));
     }
 
