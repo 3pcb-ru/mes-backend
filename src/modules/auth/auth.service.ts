@@ -613,6 +613,7 @@ export class AuthService {
             user: userData,
             settings: userSettings,
             isVerified: true,
+            message: 'Invitation accepted successfully',
         };
     }
 }

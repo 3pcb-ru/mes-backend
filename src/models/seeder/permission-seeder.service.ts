@@ -12,6 +12,132 @@ import { RolesService } from '@/modules/roles/roles.service';
 @Injectable()
 export class PermissionSeederService implements OnModuleInit {
     private db;
+
+    private readonly PREDEFINED_ROLES: Record<string, { isAdmin: boolean; isDefault: boolean; description: string; permissions: string[] | 'ALL' }> = {
+        Admin: {
+            isAdmin: true,
+            isDefault: false,
+            description: 'System administrator with full access',
+            permissions: 'ALL',
+        },
+        Authenticated: {
+            isAdmin: false,
+            isDefault: true,
+            description: 'Default role for new users',
+            permissions: [
+                Permissions.users.Read,
+                Permissions.users.Update,
+                Permissions.attachments.Read,
+                Permissions.attachments.Write,
+                Permissions.attachments.Update,
+                Permissions.attachments.Delete,
+                Permissions.notifications.Read,
+                Permissions.notifications.Update,
+                Permissions.notifications.Delete,
+                Permissions.organizations.Create,
+                Permissions.organizations.Update,
+            ],
+        },
+        Worker: {
+            isAdmin: false,
+            isDefault: false,
+            description: 'Production floor worker',
+            permissions: [
+                Permissions.execution.Read,
+                Permissions.execution.Write,
+                Permissions.traceability.Read,
+                Permissions.traceability.Write,
+                Permissions.work_orders.Read,
+                Permissions.nodes.Read,
+                Permissions.inventory.Read,
+                Permissions.attachments.Read,
+                Permissions.attachments.Write,
+                Permissions.attachments.Update,
+                Permissions.attachments.Delete,
+                Permissions.notifications.Read,
+                Permissions.notifications.Update,
+                Permissions.notifications.Delete,
+                Permissions.users.Read,
+                Permissions.users.Update,
+            ],
+        },
+        Supervisor: {
+            isAdmin: false,
+            isDefault: false,
+            description: 'Production supervisor',
+            permissions: [
+                Permissions.execution.Read,
+                Permissions.execution.Write,
+                Permissions.execution.ReadAll,
+                Permissions.traceability.Read,
+                Permissions.traceability.Write,
+                Permissions.traceability.ReadAll,
+                Permissions.work_orders.Read,
+                Permissions.work_orders.ReadAll,
+                Permissions.work_orders.Write,
+                Permissions.work_orders.Update,
+                Permissions.work_orders.Release,
+                Permissions.orders.ReadAll,
+                Permissions.orders.UpdateAll,
+                Permissions.nodes.Read,
+                Permissions.nodes.ReadAll,
+                Permissions.nodes.Update,
+                Permissions.nodes.Write,
+                Permissions.users.Read,
+                Permissions.users.ReadAll,
+                Permissions.roles.Read,
+                Permissions.tickets.Read,
+                Permissions.tickets.ReadAll,
+                Permissions.tickets.UpdateStatus,
+                Permissions.tickets.UpdateStatusAll,
+                Permissions.tickets.AddMessage,
+                Permissions.tickets.AddMessageAll,
+                Permissions.bom.Read,
+                Permissions.bom.ReadAll,
+                Permissions.bom.Update,
+                Permissions.bom.Write,
+                Permissions.products.Read,
+                Permissions.products.ReadAll,
+                Permissions.products.Update,
+                Permissions.products.Write,
+                Permissions.organizations.Read,
+                Permissions.attachments.Read,
+                Permissions.attachments.ReadAll,
+                Permissions.attachments.Write,
+                Permissions.attachments.Update,
+                Permissions.attachments.Delete,
+                Permissions.notifications.Read,
+                Permissions.notifications.ReadAll,
+                Permissions.notifications.Update,
+                Permissions.notifications.Delete,
+            ],
+        },
+        Storekeeper: {
+            isAdmin: false,
+            isDefault: false,
+            description: 'Warehouse and inventory manager',
+            permissions: [
+                Permissions.inventory.Read,
+                Permissions.inventory.ReadAll,
+                Permissions.inventory.Write,
+                Permissions.inventory.Update,
+                Permissions.inventory.Delete,
+                Permissions.bom.Read,
+                Permissions.bom.ReadAll,
+                Permissions.products.Read,
+                Permissions.products.ReadAll,
+                Permissions.work_orders.Read,
+                Permissions.work_orders.ReadAll,
+                Permissions.attachments.Read,
+                Permissions.attachments.Write,
+                Permissions.notifications.Read,
+                Permissions.notifications.Update,
+                Permissions.users.Read,
+                Permissions.users.Update,
+            ],
+        },
+    };
+
     constructor(
         private readonly drizzle: DrizzleService,
         private readonly logger: CustomLoggerService,
@@ -38,7 +164,12 @@ export class PermissionSeederService implements OnModuleInit {
             // Insert missing ones
             const missing = canonicalPermissions.filter((p) => !existingNames.includes(p));
             if (missing.length > 0) {
-                await tx.insert(permissionSchema).values(missing.map((name) => ({ name, description: PermissionDescriptions?.[name] ?? 'Description not provided.' })));
+                await tx.insert(permissionSchema).values(
+                    missing.map((name) => ({
+                        name,
+                        description: PermissionDescriptions?.[name] ?? 'Description not provided.',
+                    })),
+                );
                 this.logger.log(`✅ Inserted ${missing.length} new permissions`);
             }
 
@@ -50,35 +181,19 @@ export class PermissionSeederService implements OnModuleInit {
             }
 
             // --- 2. Ensure Roles ---
-            const ADMIN_ROLE = 'Admin';
-            const AUTHENTICATED_ROLE = 'Authenticated';
-            const roleNames = [ADMIN_ROLE, AUTHENTICATED_ROLE];
             const existingRoles = await tx.query.roles.findMany();
             const existingRoleNames = existingRoles.map((r) => r.name);
 
-            const rolesToInsert = roleNames.filter((r) => !existingRoleNames.includes(r));
+            const rolesToInsert = Object.keys(this.PREDEFINED_ROLES).filter((name) => !existingRoleNames.includes(name));
 
             if (rolesToInsert.length > 0) {
                 await tx.insert(roleSchema).values(
-                    rolesToInsert.map((name) => {
-                        if (name === ADMIN_ROLE) {
-                            return {
-                                name,
-                                description: 'Admin role',
-                                isAdmin: true,
-                                isDefault: false,
-                            };
-                        } else if (name === AUTHENTICATED_ROLE) {
-                            return {
-                                name,
-                                description: 'Default role for new users.',
-                                isAdmin: false,
-                                isDefault: true,
-                            };
-                        } else {
-                            return { name };
-                        }
-                    }),
+                    rolesToInsert.map((name) => ({
+                        name,
+                        description: this.PREDEFINED_ROLES[name].description,
+                        isAdmin: this.PREDEFINED_ROLES[name].isAdmin,
+                        isDefault: this.PREDEFINED_ROLES[name].isDefault,
+                    })),
                 );
                 this.logger.log(`✅ Inserted roles: ${rolesToInsert}`);
             }
@@ -87,71 +202,40 @@ export class PermissionSeederService implements OnModuleInit {
             const allRoles = await tx.query.roles.findMany();
             const allPerms = await tx.query.permissions.findMany();
 
-            const adminRole = allRoles.find((r) => r.isAdmin);
-            const authenticatedRole = allRoles.find((r) => r.isDefault);
+            // --- 3. Sync Role Permissions ---
+            for (const role of allRoles) {
+                const config = this.PREDEFINED_ROLES[role.name];
+                if (!config) continue;
 
-            if (adminRole) {
-                // Assign ALL permissions to Admin
+                let targetPermNames: string[] = [];
+                if (config.permissions === 'ALL') {
+                    targetPermNames = allPerms.map((p) => p.name);
+                } else if (Array.isArray(config.permissions)) {
+                    targetPermNames = config.permissions;
+                }
+
+                const targetPermIds = allPerms.filter((p) => targetPermNames.includes(p.name)).map((p) => p.id);
+
                 const existingMappings = await tx.query.rolePermissions.findMany({
-                    where: eq(rolePermissionsSchema.roleId, adminRole.id),
+                    where: eq(rolePermissionsSchema.roleId, role.id),
                 });
-                const existingPermIds = new Set(existingMappings.map((rp) => rp.permissionId));
+                const existingPermIds = existingMappings.map((rp) => rp.permissionId);
 
-                const missingAssignments = allPerms
-                    .filter((p) => !existingPermIds.has(p.id))
-                    .map((p) => ({
-                        roleId: adminRole.id,
-                        permissionId: p.id,
-                    }));
+                const toAdd = targetPermIds.filter((id) => !existingPermIds.includes(id));
 
-                if (missingAssignments.length > 0) {
-                    await tx.insert(rolePermissionsSchema).values(missingAssignments);
-                    this.logger.log(`✅ Added ${missingAssignments.length} missing permissions to Admin`);
+                if (toAdd.length > 0) {
+                    await tx.insert(rolePermissionsSchema).values(
+                        toAdd.map((pId) => ({
+                            roleId: role.id,
+                            permissionId: pId,
+                        })),
+                    );
+                    this.logger.log(`✅ Added ${toAdd.length} permissions to role '${role.name}'`);
                 }
             }
-
-            if (authenticatedRole) {
-                // All baseline permissions every authenticated user should have by default.
-                // This covers their own resources: profile, files, notifications, and org management.
-                const AUTHENTICATED_ROLE_PERMISSIONS: string[] = [
-                    // --- Own user profile ---
-                    Permissions.users.Read,
-                    Permissions.users.Update,
-                    // --- Own attachments (upload, download, delete) ---
-                    Permissions.attachments.Read,
-                    Permissions.attachments.Write,
-                    Permissions.attachments.Update,
-                    Permissions.attachments.Delete,
-                    // --- Own notifications ---
-                    Permissions.notifications.Read,
-                    Permissions.notifications.Update,
-                    Permissions.notifications.Delete,
-                    // --- Organization management ---
-                    Permissions.organizations.Create,
-                    Permissions.organizations.Update,
-                ];
-
-                const existingAuthMappings = await tx.query.rolePermissions.findMany({
-                    where: eq(rolePermissionsSchema.roleId, authenticatedRole.id),
-                });
-                const existingAuthPermIds = new Set(existingAuthMappings.map((rp) => rp.permissionId));
-
-                for (const permName of AUTHENTICATED_ROLE_PERMISSIONS) {
-                    const perm = allPerms.find((p) => p.name === permName);
-                    if (perm && !existingAuthPermIds.has(perm.id)) {
-                        await tx.insert(rolePermissionsSchema).values({
-                            roleId: authenticatedRole.id,
-                            permissionId: perm.id,
-                        });
-                        this.logger.log(`✅ Added '${perm.name}' to Authenticated role`);
-                    }
-                }
-                this.logger.log('ℹ️ Authenticated role permissions synced');
-            }
-            this.logger.log(`Permissions in DB now: ${canonicalPermissions.length}`);
-            this.logger.log(`Roles in DB: ${allRoles.length}`);
         });
-        // --- 3. Sync Redis ---
+
+        // --- 4. Sync Redis ---
         await this.rolesService.syncAll();
         this.logger.log('🎯 Permission & Role seeding completed.');
     }
