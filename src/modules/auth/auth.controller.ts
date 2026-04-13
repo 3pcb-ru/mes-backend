@@ -7,7 +7,8 @@ import { JwtUser } from '@/types/jwt.types';
 import { ok } from '@/utils';
 
 import { AuthDecorators } from './auth.decorators';
-import { ChangePasswordDto, ForgotPasswordDto, LoginDto, RefreshTokenDto, ResendVerificationDto, ResetPasswordDto, SignupDto, ValidateResetCodeDto } from './auth.dto';
+import { ChangePasswordDto, ForgotPasswordDto, LoginDto, RefreshTokenDto, ResendVerificationDto, ResetPasswordDto, SignupDto, ValidateResetCodeDto, AcceptInvitationDto } from './auth.dto';
+
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RateLimitGuard } from './guards/rate-limit.guard';
@@ -105,4 +106,12 @@ export class AuthController {
         const result = await this.authService.getResendVerificationStatus(email);
         return ok(result).message('Resend status fetched successfully');
     }
+
+    @Post('accept-invitation')
+    @AuthDecorators('acceptInvitation')
+    async acceptInvitation(@Body() acceptInvitationDto: AcceptInvitationDto) {
+        const result = await this.authService.acceptInvitation(acceptInvitationDto);
+        return ok(result).message(result.message);
+    }
 }
+

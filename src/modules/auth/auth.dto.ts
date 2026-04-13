@@ -65,6 +65,12 @@ const refreshTokenSchema = z.object({
     refreshToken: z.string().min(1, 'Refresh token is required'),
 });
 
+const acceptInvitationSchema = z.object({
+    token: z.string().min(1, 'Invitation token is required'),
+    password: validateText({ regex: passwordRegex, min: 8, max: 50 }),
+});
+
+
 // Output Schemas
 const loginResponseSchema = z.object({
     accessToken: z.string(),
@@ -113,6 +119,8 @@ export class ResetPasswordDto extends createStrictZodDto(resetPasswordSchema) {}
 export class ChangePasswordDto extends createStrictZodDto(changePasswordSchema) {}
 export class ResendVerificationDto extends createStrictZodDto(resendVerificationSchema) {}
 export class RefreshTokenDto extends createStrictZodDto(refreshTokenSchema) {}
+export class AcceptInvitationDto extends createStrictZodDto(acceptInvitationSchema) {}
+
 
 // API Response DTO's
 export class LoginApiResponseDto extends createApiResponseDto(loginResponseSchema) {}

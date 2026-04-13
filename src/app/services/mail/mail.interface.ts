@@ -69,6 +69,21 @@ export interface ISendOrderStatusMail {
 }
 
 /**
+ * User invitation interface
+ * Used for: sendInvitation()
+ */
+export interface ISendInvitationMail {
+    email: string;
+    firstName: string;
+    lastName: string;
+    organizationName: string;
+    inviterName: string;
+    roleName: string;
+    invitationUrl: string;
+}
+
+
+/**
  * Email template enum
  * Maps service methods to their corresponding email templates
  */
@@ -79,4 +94,6 @@ export enum EMAIL_TEMPLATE {
     TICKET_STATUS_NOTIFICATION = 'ticket-notification',
     ADMIN_TICKET_NOTIFICATION = 'admin-ticket-notification',
     ORDER_STATUS = 'order-status',
+    INVITATION = 'user-invitation',
 }
+

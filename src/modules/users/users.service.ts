@@ -1,4 +1,5 @@
-import { ConflictException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
+
 import { and, desc, eq, getTableColumns, isNull, sql } from 'drizzle-orm';
 
 import { StorageService } from '@/app/services/storage/storage.service';
@@ -10,11 +11,18 @@ import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 import { UserSettingsOutput, type PublicUserOutput, type UserInsertInput, type UserSelectOutput, type UserUpdateInput } from '@/models/zod-schemas';
 import { Pagination } from '@/types';
+import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { JwtUser } from '@/types/jwt.types';
 
+
 import { AttachmentService } from '../attachments/attachment.service';
-import { type UpdateUserProfileDto } from './users.dto';
+import { MailService } from '@/app/services/mail/mail.service';
+import { RandomStringGenerator } from '@/utils/random';
+import { InviteUserDto, UpdateUserProfileDto, UpdateUserStatusDto } from './users.dto';
+
 import { UsersPolicy } from './users.policy';
+import { OTP_LENGTH } from '@/common/constants';
+import bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService extends BaseFilterableService {
@@ -26,11 +34,15 @@ export class UsersService extends BaseFilterableService {
         private readonly storageService: StorageService,
         @Inject(forwardRef(() => AttachmentService))
         private readonly attachmentService: AttachmentService,
+        private readonly mailService: MailService,
+        private readonly logger: CustomLoggerService,
         filterService: FilterService,
     ) {
         super(filterService);
+        this.logger.setContext(UsersService.name);
         this.db = this.drizzle.database;
     }
+
 
     private async bindUrls(user: any, reqUser?: JwtUser): Promise<PublicUserOutput> {
         if (!user) return user;
@@ -264,4 +276,106 @@ export class UsersService extends BaseFilterableService {
         const [settings] = await this.db.select().from(Schema.userSettings).where(eq(Schema.userSettings.userId, userId)).limit(1);
         return settings || null;
     }
+
+    async inviteUser(data: InviteUserDto, inviter: JwtUser): Promise<void> {
+        const { email, firstName, lastName, roleId } = data;
+
+        // 1. Check if user already exists
+        const existingUser = await this.findByEmail(email);
+        if (existingUser) {
+            throw new ConflictException('A user with this email address already exists.');
+        }
+
+        // 2. Verify role exists and get its name
+        const role = await this.db.query.roles.findFirst({
+            where: eq(Schema.roles.id, roleId),
+        });
+        if (!role) {
+            throw new NotFoundException('The specified role does not exist.');
+        }
+
+        // 3. Get organization details
+        const organization = await this.db.query.organization.findFirst({
+            where: eq(Schema.organization.id, inviter.organizationId!),
+        });
+        if (!organization) {
+            throw new NotFoundException('Your organization could not be found.');
+        }
+
+        // 4. Create user record
+        const invitationToken = RandomStringGenerator.generateSecure(OTP_LENGTH, 'numeric');
+        const placeholderPassword = await bcrypt.hash(RandomStringGenerator.generateSecure(32), 10);
+
+        await this.db.transaction(async (tx) => {
+            const [createdUser] = await tx
+                .insert(Schema.user)
+                .values({
+                    email,
+                    firstName,
+                    lastName,
+                    password: placeholderPassword,
+                    isVerified: false,
+                    verificationToken: invitationToken,
+                    roleId,
+                    organizationId: inviter.organizationId,
+                })
+                .returning();
+
+            await tx.insert(Schema.userSettings).values({
+                userId: createdUser.id,
+                consent: false,
+            });
+        });
+
+        // 5. Send invitation email
+        const clientProtocol = process.env.CLIENT_PROTOCOL as string;
+        const clientHost = process.env.CLIENT_HOST as string;
+        const clientUrl = `${clientProtocol}://${clientHost}`;
+        const invitationUrl = `${clientUrl}/accept-invitation?token=${invitationToken}&email=${encodeURIComponent(email)}`;
+
+        await this.mailService.sendInvitation({
+            email,
+            firstName,
+            lastName,
+            organizationName: organization.name,
+            inviterName: `${inviter.firstName} ${inviter.lastName}`,
+            roleName: role.name,
+            invitationUrl,
+        });
+
+        this.logger.log(`User ${email} invited to organization ${organization.name} by ${inviter.email}`);
+    }
+
+
+    async updateStatus(id: string, body: UpdateUserStatusDto, requester: JwtUser): Promise<UserSelectOutput> {
+        const { status } = body;
+
+        // Rule 1: Cannot deactivate/activate own account
+        if (id === requester.id) {
+            throw new BadRequestException('You cannot manage your own account status.');
+        }
+
+        // Fetch the user to check organization
+        const user = await this.db.query.user.findFirst({
+            where: eq(Schema.user.id, id),
+        });
+
+        if (!user) {
+            throw new NotFoundException('User not found.');
+        }
+
+        // Rule 2: Must be in the same organization
+        if (user.organizationId !== requester.organizationId) {
+            throw new ForbiddenException('You do not have permission to manage this user’s status.');
+        }
+
+        // Perform the status update
+        if (status === 'inactive') {
+            return this.softDelete(id);
+        } else {
+            return this.restore(id);
+        }
+    }
 }
+
+

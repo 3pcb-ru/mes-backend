@@ -64,6 +64,19 @@ const resendVerificationSchema = z.object({
     email: z.email('Please enter a valid email address'),
 });
 
+const inviteUserSchema = z.object({
+    email: z.email('Please enter a valid email address'),
+    firstName: validateText({ regex: nameRegex }),
+    lastName: validateText({ regex: nameRegex }),
+    roleId: z.string().uuid('Invalid role ID'),
+});
+
+const acceptInvitationSchema = z.object({
+    token: z.string().min(1, 'Invitation token is required'),
+    password: validateText({ regex: passwordRegex, min: 8, max: 15 }),
+});
+
+
 // Response schemas (using drizzle schemas with timestamp overrides)
 const userResponseSchema = publicUserSelectSchema;
 
@@ -77,6 +90,10 @@ export class ForgotPasswordDto extends createStrictZodDto(forgotPasswordSchema) 
 export class ResetPasswordDto extends createStrictZodDto(resetPasswordSchema) {}
 export class ChangePasswordDto extends createStrictZodDto(changePasswordSchema) {}
 export class ResendVerificationDto extends createStrictZodDto(resendVerificationSchema) {}
+export class InviteUserDto extends createStrictZodDto(inviteUserSchema) {}
+export class AcceptInvitationDto extends createStrictZodDto(acceptInvitationSchema) {}
+export class UpdateUserStatusDto extends createStrictZodDto(z.object({ status: z.enum(['active', 'inactive']) })) {}
+
 
 // API response wrappers matching ResponseInterceptor
 const userApiResponseSchema = createApiResponseSchema(userResponseSchema);

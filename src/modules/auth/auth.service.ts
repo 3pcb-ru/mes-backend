@@ -19,10 +19,10 @@ import * as Schema from '@/models/schema';
 import { type UserSelectOutput } from '@/models/zod-schemas';
 import { RandomStringGenerator } from '@/utils/random';
 
+import { SetupService } from '../node/setup.service';
 import { RolesService } from '../roles/roles.service';
 import { UsersService } from '../users/users.service';
-import { SetupService } from '../node/setup.service';
-import { ChangePasswordDto, ForgotPasswordDto, LoginDto, ResetPasswordDto, SignupDto, ValidateResetCodeDto } from './auth.dto';
+import { AcceptInvitationDto, ChangePasswordDto, ForgotPasswordDto, LoginDto, ResetPasswordDto, SignupDto, ValidateResetCodeDto } from './auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -584,4 +584,36 @@ export class AuthService {
             return 0;
         }
     }
+
+    async acceptInvitation(data: AcceptInvitationDto) {
+        const { token, password } = data;
+
+        const user = await this.usersService.findByVerificationToken(token);
+        if (!user) {
+            throw new BadRequestException('The invitation link is invalid or has expired.');
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        await this.usersService.updateInternal(user.id, {
+            password: hashedPassword,
+            isVerified: true,
+            verificationToken: null,
+        });
+
+        this.logger.log('User accepted invitation and set password', { userId: user.id, email: user.email });
+
+        // Auto-login after password setup
+        const userSettings = await this.usersService.getUserSettings(user.id);
+        const tokenData = await this.setToken(user.id, user.email, user.roleId, user.organizationId!);
+
+        const { verificationToken: _, password: __, deletedAt: ___, ...userData } = user;
+        return {
+            accessToken: tokenData.accessToken,
+            refreshToken: tokenData.refreshToken,
+            user: userData,
+            settings: userSettings,
+            isVerified: true,
+        };
+    }
 }
+

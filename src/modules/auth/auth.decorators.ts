@@ -90,7 +90,15 @@ const authEndpointConfig = {
             ZodResponse({ status: 200, type: RefreshTokenApiResponseDto, description: 'Returns new accessToken and refreshToken' }),
             ApiResponse({ status: 401, description: 'Invalid or expired refresh token', type: ErrorResponseDto }),
         ),
+    acceptInvitation: () =>
+        applyDecorators(
+            ApiOperation({ summary: 'Accept invitation and set password' }),
+            ZodResponse({ status: 200, type: LoginApiResponseWithSettingsDto, description: 'Invitation accepted and user logged in' }),
+            ApiResponse({ status: 400, description: 'Invalid or expired invitation link', type: ErrorResponseDto }),
+        ),
+
 } as const;
+
 
 export type AuthEndpointKey = keyof typeof authEndpointConfig;
 export function AuthDecorators(endpoint: AuthEndpointKey) {

@@ -1,15 +1,18 @@
-import { Body, Controller, ForbiddenException, Get, Param, Put, Query } from '@nestjs/common';
-import { UsersService } from './users.service';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 
-import { UpdateUserProfileDto } from './users.dto';
-import { ok } from '@/utils';
-import { Pagination } from '@/types';
-import { UsersDecorators } from './users.decorators';
-import { PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { CurrentUser } from '@/common/decorators/user.decorator';
+import { PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
+import { Pagination } from '@/types';
 import { JwtUser } from '@/types/jwt.types';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ok } from '@/utils';
+
+import { UsersDecorators } from './users.decorators';
+import { InviteUserDto, UpdateUserProfileDto, UpdateUserStatusDto } from './users.dto';
+import { UsersService } from './users.service';
+
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -60,4 +63,29 @@ export class UsersController {
         const user = await this.usersService.updateProfile(userId, userData, currentUser);
         return ok(user).message('Your profile has been updated successfully');
     }
+
+    @Post('invite')
+    @UsersDecorators('invite')
+    async invite(@Body() inviteData: InviteUserDto, @CurrentUser() currentUser: JwtUser) {
+        if (!currentUser.organizationId) {
+            throw new ForbiddenException('You must belong to an organization to invite users');
+        }
+        await this.usersService.inviteUser(inviteData, currentUser);
+        return ok({}).message('Invitation sent successfully');
+    }
+
+    @Patch(':userId/status')
+    @UsersDecorators('updateStatus')
+    async updateStatus(@Param('userId') userId: string, @Body() statusData: UpdateUserStatusDto, @CurrentUser() currentUser: JwtUser) {
+        const user = await this.usersService.updateStatus(userId, statusData, currentUser);
+        return ok(user).message(`User status updated to ${statusData.status} successfully.`);
+    }
+
+    @Delete(':userId')
+    @UsersDecorators('deactivate')
+    async deactivate(@Param('userId') userId: string, @CurrentUser() currentUser: JwtUser) {
+        const user = await this.usersService.updateStatus(userId, { status: 'inactive' }, currentUser);
+        return ok(user).message('User deactivated successfully.');
+    }
 }
+

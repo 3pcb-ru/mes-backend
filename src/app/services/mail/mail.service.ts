@@ -12,6 +12,7 @@ import { API_CONFIG_TOKEN, IAppConfiguration } from '@/config';
 import {
     EMAIL_TEMPLATE,
     ISendAdminTicketNotification,
+    ISendInvitationMail,
     ISendMail,
     ISendOrderStatusMail,
     ISendPasswordResetMail,
@@ -300,6 +301,38 @@ export class MailService {
         } catch (error) {
             this.logger.error(`Failed to send admin ticket notification:`, error);
             throw new PreconditionFailedException('Failed to send admin ticket notification');
+        }
+    }
+
+    public async sendInvitation(data: ISendInvitationMail): Promise<void> {
+        const { email, firstName, lastName, organizationName, inviterName, roleName, invitationUrl } = data;
+
+        try {
+            const { server } = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
+            const baseUrl = server.url;
+
+            const htmlContent = this.fillTemplate(EMAIL_TEMPLATE.INVITATION, {
+                baseUrl,
+                email,
+                firstName,
+                lastName,
+                organizationName,
+                inviterName,
+                roleName,
+                invitationUrl,
+            });
+
+            const mailData: ISendMail = {
+                to: email,
+                subject: `Invitation to join ${organizationName} - GRVT MES`,
+                html: htmlContent,
+            };
+
+            await this.sendMail(mailData);
+            this.logger.log(`Invitation email sent to ${email}`);
+        } catch (error) {
+            this.logger.error(`Failed to send invitation email to ${email}:`, error);
+            throw new PreconditionFailedException('Failed to send invitation email');
         }
     }
 }

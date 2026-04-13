@@ -58,8 +58,83 @@ export const Permissions = {
         Delete: 'notifications.delete',
     },
     organizations: {
-        Create: 'organizations.create',
+        Write: 'organizations.write',
         Update: 'organizations.update',
+        Delete: 'organizations.delete',
+        Read: 'organizations.read',
+        ReadAll: 'organizations.read.all',
+    },
+    nodes: {
+        Write: 'nodes.write',
+        Update: 'nodes.update',
+        Delete: 'nodes.delete',
+        Read: 'nodes.read',
+        ReadAll: 'nodes.read.all',
+    },
+    bom_products: {
+        Write: 'bom_products.write',
+        Update: 'bom_products.update',
+        Delete: 'bom_products.delete',
+        Read: 'bom_products.read',
+        ReadAll: 'bom_products.read.all',
+    },
+    bom_products_revisions: {
+        Write: 'bom_products_revisions.write',
+        Update: 'bom_products_revisions.update',
+        Delete: 'bom_products_revisions.delete',
+        Read: 'bom_products_revisions.read',
+        ReadAll: 'bom_products_revisions.read.all',
+    },
+    bom: {
+        Write: 'bom.write',
+        Update: 'bom.update',
+        Delete: 'bom.delete',
+        Read: 'bom.read',
+        ReadAll: 'bom.read.all',
+    },
+    products: {
+        Read: 'products.read',
+        ReadAll: 'products.read.all',
+        Write: 'products.write',
+        Update: 'products.update',
+        Delete: 'products.delete',
+    },
+    work_orders: {
+        Read: 'work_orders.read',
+        ReadAll: 'work_orders.read.all',
+        Write: 'work_orders.write',
+        Update: 'work_orders.update',
+        Delete: 'work_orders.delete',
+        Release: 'work_orders.release',
+    },
+    user_addresses: {
+        Read: 'user_addresses.read',
+        ReadAll: 'user_addresses.read.all',
+        Write: 'user_addresses.write',
+        Update: 'user_addresses.update',
+        Delete: 'user_addresses.delete',
+    },
+    traceability: {
+        Read: 'traceability.read',
+        ReadAll: 'traceability.read.all',
+        Write: 'traceability.write',
+    },
+    execution: {
+        Read: 'execution.read',
+        ReadAll: 'execution.read.all',
+        Write: 'execution.write',
+    },
+    connectivity: {
+        Read: 'connectivity.read',
+        Write: 'connectivity.write',
+        Ingest: 'connectivity.ingest',
+    },
+    inventory: {
+        Read: 'inventory.read',
+        ReadAll: 'inventory.read.all',
+        Write: 'inventory.write',
+        Update: 'inventory.update',
+        Delete: 'inventory.delete',
     },
 } as const;
 
@@ -127,6 +202,69 @@ export const PermissionDescriptions: Record<string, string> = {
     'notifications.read.all': 'Read all notifications in the system',
     'notifications.update': 'Update own notifications (e.g., mark as read)',
     'notifications.delete': 'Delete own notifications',
+
+    // --- Organizations ---
     'organizations.update': 'Update organization information (name, logo, etc.)',
-    'organizations.create': 'Create and link a new organization',
+    'organizations.write': 'Create and link a new organization',
+    'organizations.delete': 'Delete organization',
+    'organizations.read': 'Read organization information',
+    'organizations.read.all': 'Read all organizations in the system',
+
+    // --- Nodes ---
+    'nodes.write': 'Create and configure factory nodes/equipment',
+    'nodes.update': 'Update node configuration and capabilities',
+    'nodes.delete': 'Remove nodes from the factory hierarchy',
+    'nodes.read': 'View factory nodes and their status',
+    'nodes.read.all': 'View all factory nodes in the system',
+
+    // --- BOM Management ---
+    'bom.write': 'Create new Bill of Materials',
+    'bom.update': 'Update existing BOMs',
+    'bom.delete': 'Delete BOMs',
+    'bom.read': 'View own BOMs',
+    'bom.read.all': 'View all BOMs in the system',
+
+    // --- Products ---
+    'products.read': 'Read own products',
+    'products.read.all': 'Read all products in the system',
+    'products.write': 'Create new products',
+    'products.update': 'Update products',
+    'products.delete': 'Delete products',
+
+    // --- Work Orders ---
+    'work_orders.read': 'Read own work orders',
+    'work_orders.read.all': 'Read all work orders in the system',
+    'work_orders.write': 'Create new work orders',
+    'work_orders.update': 'Update work orders',
+    'work_orders.delete': 'Delete work orders',
+    'work_orders.release': 'Release work orders to production',
+
+    // --- User Addresses ---
+    'user_addresses.read': 'Read own addresses',
+    'user_addresses.read.all': 'Read all user addresses',
+    'user_addresses.write': 'Create new addresses',
+    'user_addresses.update': 'Update own addresses',
+    'user_addresses.delete': 'Delete own addresses',
+
+    // --- Traceability ---
+    'traceability.read': 'Read own traceability data',
+    'traceability.read.all': 'Read all traceability data in the system',
+    'traceability.write': 'Create traceability records',
+
+    // --- Execution ---
+    'execution.read': 'Read execution data',
+    'execution.read.all': 'Read all execution data in the system',
+    'execution.write': 'Create/update execution records',
+
+    // --- Connectivity ---
+    'connectivity.read': 'Read connectivity status',
+    'connectivity.write': 'Configure connectivity',
+    'connectivity.ingest': 'Ingest data from external sources',
+
+    // --- Inventory ---
+    'inventory.read': 'Read own inventory data',
+    'inventory.read.all': 'Read all inventory data in the system',
+    'inventory.write': 'Create inventory records',
+    'inventory.update': 'Update inventory data',
+    'inventory.delete': 'Delete inventory records',
 };
