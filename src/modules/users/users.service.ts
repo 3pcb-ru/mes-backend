@@ -109,6 +109,7 @@ export class UsersService extends BaseFilterableService {
             .where(policyWhere)
             .filter(query)
             .join(Schema.roles, eq(Schema.user.roleId, Schema.roles.id), 'inner')
+            .join(Schema.organization, eq(Schema.user.organizationId, Schema.organization.id), 'left')
             .orderByFromQuery(query, 'createdAt')
             .paginate(query)
             .selectFields({
