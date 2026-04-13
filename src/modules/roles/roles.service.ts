@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { RedisService } from '@/app/services/redis/redis.service';
@@ -13,9 +13,10 @@ import { permissions } from '@/models/schema';
 import { rolePermissions, rolePermissions as rolePermissionsSchema, roles as roleSchema } from '@/models/schema/roles.schema';
 import { user as userSchema } from '@/models/schema/users.schema';
 import { RoleInsertInput } from '@/models/zod-schemas';
+import { JwtUser } from '@/types/jwt.types';
 
 import { UsersService } from '../users/users.service';
-import { UpdateRoleDetailsDto } from './roles.dto';
+import { CreateRoleDto, UpdateRoleDetailsDto } from './roles.dto';
 
 @Injectable()
 export class RolesService extends BaseFilterableService {
@@ -139,16 +140,15 @@ export class RolesService extends BaseFilterableService {
         return updatedUser;
     }
 
-    async create(role: RoleInsertInput) {
-        if (role.isAdmin) {
-            throw new BadRequestException('Admin role cannot be created!');
-        }
+    async create(payload: CreateRoleDto, user: JwtUser) {
+        const roleData: RoleInsertInput = {
+            ...payload,
+            organizationId: user.organizationId,
+            isAdmin: false,
+            isDefault: false,
+        };
 
-        if (role.isDefault) {
-            throw new BadRequestException('Default role cannot be created!');
-        }
-
-        const [newRole] = await this.db.insert(roleSchema).values(role).returning();
+        const [newRole] = await this.db.insert(roleSchema).values(roleData).returning();
 
         if (!newRole) {
             throw new InternalServerErrorException('An error occured while creating role');
@@ -157,14 +157,46 @@ export class RolesService extends BaseFilterableService {
         return newRole;
     }
 
-    async lookup() {
+    async duplicate(roleId: string, user: JwtUser) {
+        const sourceRole = await this.findOneWithPermissions(roleId, user);
+
+        const newRole = await this.db.transaction(async (tx) => {
+            const [role] = await tx
+                .insert(roleSchema)
+                .values({
+                    name: `${sourceRole.name} Copy`,
+                    description: sourceRole.description,
+                    organizationId: user.organizationId,
+                    isAdmin: false,
+                    isDefault: false,
+                })
+                .returning();
+
+            if (sourceRole.permissions.length > 0) {
+                const rolePerms = sourceRole.permissions.map((p) => ({
+                    roleId: role.id,
+                    permissionId: p.id,
+                }));
+                await tx.insert(rolePermissionsSchema).values(rolePerms);
+            }
+
+            return role;
+        });
+
+        await this.setPermissionToken(newRole.id);
+        return newRole;
+    }
+
+    async lookup(user: JwtUser) {
         const rolesWithPermissions = await this.db.query.roles.findMany({
+            where: or(isNull(roleSchema.organizationId), eq(roleSchema.organizationId, user.organizationId)),
             with: {
                 rolePermissions: {
                     columns: {},
                     with: {
                         permission: {
                             columns: {
+                                id: true,
                                 name: true,
                                 description: true,
                             },
@@ -183,11 +215,12 @@ export class RolesService extends BaseFilterableService {
         });
     }
 
-    async list(query: PaginatedFilterQueryDto) {
+    async list(user: JwtUser, query: PaginatedFilterQueryDto) {
         const result = await this.filterable(this.db, roleSchema, {
             defaultSortColumn: 'createdAt',
         })
             .filter(query)
+            .where(or(isNull(roleSchema.organizationId), eq(roleSchema.organizationId, user.organizationId)))
             .orderByFromQuery(query, 'createdAt')
             .paginate(query)
             .select();
@@ -195,9 +228,9 @@ export class RolesService extends BaseFilterableService {
         return result;
     }
 
-    async findOne(roleId: string) {
+    async findOne(roleId: string, user: JwtUser) {
         const role = await this.db.query.roles.findFirst({
-            where: eq(roleSchema.id, roleId),
+            where: and(eq(roleSchema.id, roleId), or(isNull(roleSchema.organizationId), eq(roleSchema.organizationId, user.organizationId))),
         });
 
         if (!role) {
@@ -207,9 +240,9 @@ export class RolesService extends BaseFilterableService {
         return role;
     }
 
-    async findOneWithPermissions(roleId: string) {
+    async findOneWithPermissions(roleId: string, user: JwtUser) {
         const role = await this.db.query.roles.findFirst({
-            where: eq(roleSchema.id, roleId),
+            where: and(eq(roleSchema.id, roleId), or(isNull(roleSchema.organizationId), eq(roleSchema.organizationId, user.organizationId))),
             with: {
                 rolePermissions: {
                     columns: {
@@ -240,43 +273,33 @@ export class RolesService extends BaseFilterableService {
         };
     }
 
-    async updateDetails(roleId: string, body: UpdateRoleDetailsDto) {
-        const role = await this.findOne(roleId);
+    async updateDetails(roleId: string, body: UpdateRoleDetailsDto, user: JwtUser) {
+        const role = await this.findOne(roleId, user);
 
-        if (role.isAdmin) {
-            throw new BadRequestException('Admin role details cannot be changed!');
-        }
-
-        if (role.isDefault) {
-            throw new BadRequestException('Default role details cannot be changed!');
+        if (!role.organizationId) {
+            throw new BadRequestException('System roles cannot be modified.');
         }
 
         const [updated] = await this.db.update(roleSchema).set(body).where(eq(roleSchema.id, roleId)).returning();
 
         if (!updated) {
-            throw new InternalServerErrorException('An error occured while updating role details.');
+            throw new InternalServerErrorException('An error occurred while updating role details.');
         }
 
         return updated;
     }
 
-    async updatePermissions(roleId: string, newPermissionIds: string[], tsx?: DrizzleTransaction) {
+    async updatePermissions(roleId: string, newPermissionIds: string[], user: JwtUser, tsx?: DrizzleTransaction) {
         const dbInstance = tsx ?? this.db;
 
         if (!newPermissionIds.length) {
             throw new BadRequestException('Permission list cannot be empty.');
         }
 
-        const role = await dbInstance.query.roles.findFirst({
-            where: eq(roleSchema.id, roleId),
-        });
+        const role = await this.findOne(roleId, user);
 
-        if (!role) {
-            throw new NotFoundException(`Role not found for id: ${roleId}`);
-        }
-
-        if (role.isAdmin) {
-            throw new BadRequestException('Admin role cannot be updated!');
+        if (!role.organizationId) {
+            throw new BadRequestException('System roles cannot be modified.');
         }
 
         const uniqueNewIds = Array.from(new Set(newPermissionIds));
@@ -312,5 +335,30 @@ export class RolesService extends BaseFilterableService {
         });
 
         await this.setPermissionToken(roleId);
+    }
+
+    async delete(roleId: string, user: JwtUser) {
+        const role = await this.findOne(roleId, user);
+
+        if (!role.organizationId) {
+            throw new BadRequestException('System roles cannot be deleted.');
+        }
+
+        // Check for active users assigned to this role
+        const activeUsers = await this.db.query.user.findFirst({
+            where: and(eq(userSchema.roleId, roleId), isNull(userSchema.deletedAt)),
+        });
+
+        if (activeUsers) {
+            throw new BadRequestException('rules in use by active user');
+        }
+
+        const [deleted] = await this.db.update(roleSchema).set({ deletedAt: new Date() }).where(eq(roleSchema.id, roleId)).returning();
+
+        if (!deleted) {
+            throw new InternalServerErrorException('An error occured while deleting role.');
+        }
+
+        return deleted;
     }
 }

@@ -12,7 +12,6 @@ import { WorkOrderDecorators } from './work-order.decorators';
 @ApiTags('Work Orders')
 @ApiBearerAuth()
 @Controller('work-orders')
-@UseGuards(JwtAuthGuard)
 export class WorkOrderController {
     constructor(private readonly workOrderService: WorkOrderService) {}
 

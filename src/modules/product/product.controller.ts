@@ -14,14 +14,12 @@ import { ProductDecorators } from './product.decorators';
 
 @ApiTags('Products')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductController {
     constructor(private readonly svc: ProductService) {}
 
     @Get()
     @ProductDecorators.list()
-    @ApiOperation({ summary: 'List all products' })
     async list() {
         const result = await this.svc.list();
         return ok(result);
@@ -29,7 +27,6 @@ export class ProductController {
 
     @Post()
     @ProductDecorators.create()
-    @ApiOperation({ summary: 'Create a new product' })
     async create(@Body() body: CreateProductDto, @CurrentUser() user: JwtUser) {
         if (!user.organizationId) {
             throw new Error('User does not belong to any organization');
@@ -40,7 +37,6 @@ export class ProductController {
 
     @Get(':id')
     @ProductDecorators.findOne()
-    @ApiOperation({ summary: 'Get product details' })
     async get(@Param('id') id: string) {
         const result = await this.svc.findOne(id);
         return ok(result);
@@ -48,14 +44,13 @@ export class ProductController {
 
     @Put(':id')
     @ProductDecorators.update()
-    @ApiOperation({ summary: 'Update product' })
     async update(@Param('id') id: string, @Body() body: UpdateProductDto) {
         const result = await this.svc.update(id, body);
         return ok(result);
     }
 
     @Delete(':id')
-    @ApiOperation({ summary: 'Delete product' })
+    @ProductDecorators.delete()
     async delete(@Param('id') id: string) {
         const result = await this.svc.delete(id);
         return ok(result);

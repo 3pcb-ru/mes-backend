@@ -16,7 +16,6 @@ import { NodeDecorators } from './node.decorators';
 @ApiTags('Nodes')
 @ApiBearerAuth()
 @Controller('nodes')
-@UseGuards(JwtAuthGuard)
 export class NodeController {
     constructor(private readonly nodeService: NodeService) {}
 

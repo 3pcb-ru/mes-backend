@@ -11,7 +11,6 @@ import { JwtUser } from '@/types/jwt.types';
 
 @ApiTags('User Addresses')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('account/addresses')
 export class UserAddressesController {
     constructor(private readonly service: UserAddressesService) { }

@@ -1,23 +1,35 @@
-import { applyDecorators } from '@nestjs/common';
+import { applyDecorators, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+
+import { Permissions } from '@/common/permissions';
+import { RequiresPermissions } from '@/modules/auth/decorators/permission.decorator';
+import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
+import { PermissionGuard } from '@/modules/auth/guards/permission.guard';
 
 export const ExecutionDecorators = {
     list: () =>
         applyDecorators(
-            ApiOperation({ summary: 'List all work orders (Execution Mock)' }),
-            ApiResponse({ status: 200, description: 'Work orders fetched successfully' }),
-        ),
-
-    create: () =>
-        applyDecorators(
-            ApiOperation({ summary: 'Create a new work order (Execution Mock)' }),
-            ApiResponse({ status: 201, description: 'Work order created successfully' }),
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.execution.Read),
+            ApiOperation({ summary: 'List all running jobs (mock)' }),
+            ApiResponse({ status: 200, description: 'Jobs fetched successfully' }),
         ),
 
     get: () =>
         applyDecorators(
-            ApiOperation({ summary: 'Get a work order by ID (Execution Mock)' }),
-            ApiResponse({ status: 200, description: 'Work order fetched successfully' }),
-            ApiResponse({ status: 404, description: 'Work order not found' }),
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.execution.Read),
+            ApiOperation({ summary: 'Get job status by ID (mock)' }),
+            ApiResponse({ status: 200, description: 'Job fetched successfully' }),
+            ApiResponse({ status: 404, description: 'Job not found' }),
+        ),
+
+    create: () =>
+        applyDecorators(
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.execution.Write),
+            ApiOperation({ summary: 'Submit a new job to execution (mock)' }),
+            ApiResponse({ status: 201, description: 'Job created successfully' }),
+            ApiResponse({ status: 400, description: 'Bad Request' }),
         ),
 };

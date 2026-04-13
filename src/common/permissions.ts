@@ -58,7 +58,7 @@ export const Permissions = {
         Delete: 'notifications.delete',
     },
     organizations: {
-        Write: 'organizations.write',
+        Create: 'organizations.write',
         Update: 'organizations.update',
         Delete: 'organizations.delete',
         Read: 'organizations.read',

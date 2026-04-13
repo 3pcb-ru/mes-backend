@@ -1,16 +1,20 @@
-import { applyDecorators } from '@nestjs/common';
+import { applyDecorators, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { UseGuards } from '@nestjs/common';
 import { ZodResponse } from 'nestjs-zod';
+
+import { Permissions } from '@/common/permissions';
+import { RequiresPermissions } from '@/modules/auth/decorators/permission.decorator';
+import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
+import { PermissionGuard } from '@/modules/auth/guards/permission.guard';
 
 import { ErrorResponseDto } from '@/common/dto/error.dto';
 import { AddressApiResponseDto, AddressPaginatedApiResponseDto } from './user-addresses.dto';
-import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 
 const userAddressesEndpointConfig = {
     list: () =>
         applyDecorators(
-            UseGuards(JwtAuthGuard),
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.user_addresses.Read),
             ApiOperation({ summary: 'Get all user addresses' }),
             ZodResponse({ status: 200, type: AddressPaginatedApiResponseDto }),
             ApiResponse({ status: 401, description: 'Unauthorized', type: ErrorResponseDto }),
@@ -18,7 +22,8 @@ const userAddressesEndpointConfig = {
 
     findOne: () =>
         applyDecorators(
-            UseGuards(JwtAuthGuard),
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.user_addresses.Read),
             ApiOperation({ summary: 'Get user address by id' }),
             ZodResponse({ status: 200, type: AddressApiResponseDto }),
             ApiResponse({ status: 401, description: 'Unauthorized', type: ErrorResponseDto }),
@@ -26,7 +31,8 @@ const userAddressesEndpointConfig = {
 
     create: () =>
         applyDecorators(
-            UseGuards(JwtAuthGuard),
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.user_addresses.Write),
             ApiOperation({ summary: 'Create a new address' }),
             ZodResponse({ status: 200, type: AddressApiResponseDto }),
             ApiResponse({ status: 400, description: 'Bad request - validation failed', type: ErrorResponseDto }),
@@ -35,7 +41,8 @@ const userAddressesEndpointConfig = {
 
     update: () =>
         applyDecorators(
-            UseGuards(JwtAuthGuard),
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.user_addresses.Update),
             ApiOperation({ summary: 'Update an address' }),
             ZodResponse({ type: AddressApiResponseDto }),
             ApiResponse({ status: 400, description: 'Bad request - validation failed', type: ErrorResponseDto }),
@@ -45,7 +52,8 @@ const userAddressesEndpointConfig = {
 
     setDefault: () =>
         applyDecorators(
-            UseGuards(JwtAuthGuard),
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.user_addresses.Update),
             ApiOperation({ summary: 'Set address as default' }),
             ZodResponse({ type: AddressApiResponseDto }),
             ApiResponse({ status: 401, description: 'Unauthorized', type: ErrorResponseDto }),
@@ -54,7 +62,8 @@ const userAddressesEndpointConfig = {
 
     remove: () =>
         applyDecorators(
-            UseGuards(JwtAuthGuard),
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.user_addresses.Delete),
             ApiOperation({ summary: 'Delete an address' }),
             ZodResponse({ type: AddressApiResponseDto }),
             ApiResponse({ status: 401, description: 'Unauthorized', type: ErrorResponseDto }),

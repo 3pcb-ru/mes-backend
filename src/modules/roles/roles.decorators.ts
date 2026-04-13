@@ -81,6 +81,20 @@ const rolesEndpointConfig = {
             ApiOperation({ summary: 'Update role details' }),
             ZodResponse({ status: 200, type: RoleApiResponseDto }),
         ),
+    duplicate: () =>
+        applyDecorators(
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.roles.Write),
+            ApiOperation({ summary: 'Duplicate an existing role (System or Custom)' }),
+            ZodResponse({ status: 201, type: RoleApiResponseDto }),
+        ),
+    delete: () =>
+        applyDecorators(
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.roles.Delete),
+            ApiOperation({ summary: 'Delete a custom role' }),
+            ZodResponse({ status: 200, type: RoleApiResponseDto }),
+        ),
 } as const;
 
 export type RolesEndpointKey = keyof typeof rolesEndpointConfig;
