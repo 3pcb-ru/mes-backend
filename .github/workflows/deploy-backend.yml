@@ -43,6 +43,7 @@ jobs:
             Containerfile.prod
             compose.prod.yml
             .dockerignore
+            scripts
 
   deploy:
     needs: build
