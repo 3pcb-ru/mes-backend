@@ -31,7 +31,9 @@ export class RolesService extends BaseFilterableService {
         filterService: FilterService,
     ) {
         super(filterService);
-        this.logger.setContext(RolesService.name);
+        if (this.logger) {
+            this.logger.setContext(RolesService.name);
+        }
         this.db = this.drizzle.database;
     }
 

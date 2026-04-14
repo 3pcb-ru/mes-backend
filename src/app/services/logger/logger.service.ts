@@ -1,7 +1,8 @@
-import { Injectable, LoggerService, Scope } from '@nestjs/common';
+import { Injectable, LoggerService } from '@nestjs/common';
+
 import Logger, { LOG_LEVEL } from './logger';
 
-@Injectable({ scope: Scope.TRANSIENT })
+@Injectable()
 export class CustomLoggerService implements LoggerService {
     private logger: Logger;
     private context?: string;

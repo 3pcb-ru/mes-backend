@@ -143,7 +143,9 @@ export class PermissionSeederService implements OnModuleInit {
         private readonly logger: CustomLoggerService,
         private readonly rolesService: RolesService,
     ) {
-        this.logger.setContext(PermissionSeederService.name);
+        if (this.logger) {
+            this.logger.setContext(PermissionSeederService.name);
+        }
         this.db = this.drizzle.database;
     }
 

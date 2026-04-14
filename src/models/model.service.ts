@@ -28,16 +28,22 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
         private readonly logger: CustomLoggerService,
     ) {
         try {
-            this.logger.setContext(DrizzleService.name);
+            if (this.logger) {
+                this.logger.setContext(DrizzleService.name);
+            }
             const poolConfig = this.createPoolConfig();
             this.pool = new Pool(poolConfig);
             this.db = drizzle(this.pool, { schema });
 
-            this.logger.log('type', typeof this.db);
+            if (this.logger) {
+                this.logger.log('type', typeof this.db);
+            }
 
             this.setupPoolEventHandlers();
         } catch (error) {
-            this.logger.error('Database initialization failed:', error);
+            if (this.logger) {
+                this.logger.error('Database initialization failed:', error);
+            }
             throw error;
         }
     }
@@ -72,8 +78,10 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
             const result = await client.query('SELECT current_user, current_database()');
             this.logger.log('Connected as:', result.rows[0]);
         } catch (error) {
-            this.logger.error('Connection validation failed:', error);
-            throw new Error('Database connection validation failed');
+            if (this.logger) {
+                this.logger.error('Connection validation failed:', error);
+            }
+            throw new Error('Database connection validation failed', { cause: error });
         } finally {
             client.release();
         }
@@ -88,10 +96,12 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
     private async validateMigrationPermissions(): Promise<void> {
         try {
             await promises.access(this.migrationPaths.root, constants.W_OK);
-        } catch {
-            this.logger.error(`No write permission to migrations folder: ${this.migrationPaths.root}`);
-            this.logger.error('Please run: chmod -R 755 drizzle/');
-            throw new Error('Migration folder permission denied');
+        } catch (error) {
+            if (this.logger) {
+                this.logger.error(`No write permission to migrations folder: ${this.migrationPaths.root}`);
+                this.logger.error('Please run: chmod -R 755 drizzle/');
+            }
+            throw new Error('Migration folder permission denied', { cause: error });
         }
     }
 

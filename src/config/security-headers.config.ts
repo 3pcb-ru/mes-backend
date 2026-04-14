@@ -64,6 +64,13 @@ const CLIENT_HOST = process.env.CLIENT_HOST || 'localhost:4000';
 const SERVER_URL = `${SERVER_PROTOCOL}://${SERVER_HOST}:${SERVER_PORT}`;
 const CLIENT_URL = `${CLIENT_PROTOCOL}://${CLIENT_HOST}`;
 
+// MinIO/Storage configuration
+const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT || 'localhost';
+const MINIO_PORT = process.env.MINIO_PORT || '9000';
+const MINIO_USE_SSL = process.env.MINIO_USE_SSL === 'true';
+const MINIO_PROTOCOL = MINIO_USE_SSL ? 'https' : 'http';
+const MINIO_URL = `${MINIO_PROTOCOL}://${MINIO_ENDPOINT}:${MINIO_PORT}`;
+
 if (!['development', 'production', 'test'].includes(NODE_ENV)) {
     console.warn(`Unknown NODE_ENV: ${NODE_ENV}, defaulting to development`);
 }
@@ -101,8 +108,10 @@ const DEV_SCRIPT_SRC = isDevelopment ? `${SELF} ${UNSAFE_INLINE} ${UNSAFE_EVAL}`
 
 const DEV_STYLE_SRC = isDevelopment ? `${SELF} ${UNSAFE_INLINE}` : `${SELF} ${NONCE_PLACEHOLDER}`; // Backend minimal style support
 
-// Connect-src allows frontend to make API requests to backend
-const DEV_CONNECT_SRC = isDevelopment ? `${SELF} ${HTTPS} ${WS} ${WSS} ${DANNIE_DOMAINS} ${FRONTEND_URLS}` : `${SELF} ${WS} ${WSS} ${DANNIE_DOMAINS} ${FRONTEND_URLS}`;
+// Connect-src allows frontend to make API requests to backend and storage
+const DEV_CONNECT_SRC = isDevelopment
+    ? `${SELF} ${HTTPS} ${WS} ${WSS} ${DANNIE_DOMAINS} ${FRONTEND_URLS} ${MINIO_URL} ${BLOB}`
+    : `${SELF} ${WS} ${WSS} ${DANNIE_DOMAINS} ${FRONTEND_URLS} ${MINIO_URL} ${BLOB}`;
 
 // Simplified config - remove unused route definitions
 const policies = {
@@ -112,7 +121,7 @@ const policies = {
             'default-src': SELF,
             'script-src': DEV_SCRIPT_SRC,
             'style-src': DEV_STYLE_SRC,
-            'img-src': `${SELF} ${DATA} ${BLOB}`, // Minimal image support for API responses
+            'img-src': `${SELF} ${DATA} ${BLOB} ${MINIO_URL} ${SERVER_URL} ${FRONTEND_URLS}`, // Allow storage, backend, and frontend images
             'font-src': `${SELF} ${DATA}`,
             'connect-src': DEV_CONNECT_SRC,
             'media-src': NONE, // Backend API doesn't serve media
@@ -136,7 +145,7 @@ const policies = {
             'default-src': SELF,
             'script-src': DEV_SCRIPT_SRC,
             'style-src': DEV_STYLE_SRC,
-            'img-src': `${SELF} ${DATA} ${BLOB}`, // For API documentation or error pages
+            'img-src': `${SELF} ${DATA} ${BLOB} ${MINIO_URL} ${SERVER_URL} ${FRONTEND_URLS}`, // Storage, backend and frontend images
             'font-src': SELF, // Minimal font support
             'connect-src': DEV_CONNECT_SRC,
             'frame-ancestors': NONE, // Backend API shouldn't be framed

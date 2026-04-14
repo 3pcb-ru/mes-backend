@@ -103,7 +103,7 @@ export class AuthService {
                 throw new ConflictException('Email already registered');
             }
 
-            const defaultRole = await this.rolesService.getDefault();
+            const adminRole = await this.rolesService.getAdmin();
 
             const { userRecord, organizationRecord } = await this.db.transaction(async (tx) => {
                 const [f] = await tx
@@ -123,7 +123,7 @@ export class AuthService {
                         password: hashedPassword,
                         verificationToken,
                         isVerified: false,
-                        roleId: defaultRole.id,
+                        roleId: adminRole.id,
                         organizationId: f.id,
                     })
                     .returning();

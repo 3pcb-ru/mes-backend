@@ -1,7 +1,7 @@
 {
     "name": "mes-backend",
     "description": "NestJS backend application for online MES platform for manufacturing enterprises to manage and optimize their production processes.",
-    "version": "4.6.0",
+    "version": "4.8.0",
     "private": true,
     "scripts": {
         "preinstall": "npx only-allow pnpm",
@@ -35,6 +35,7 @@
         "db:migrate": "drizzle-kit migrate",
         "db:baseline": "tsx scripts/baseline-migrations.ts",
         "db:seed-permissions": "ts-node -r tsconfig-paths/register --transpile-only scripts/seed-permissions.ts",
+        "db:promote-org-owners": "ts-node -r tsconfig-paths/register --transpile-only scripts/promote-org-owners.ts",
         "db:studio": "drizzle-kit studio",
         "prepare": "husky || true"
     },
