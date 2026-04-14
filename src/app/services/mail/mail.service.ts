@@ -127,16 +127,13 @@ export class MailService {
         const { email, name, code } = data;
 
         try {
-            const { server } = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
-            this.logger.log('server', server);
-            // const baseUrl = server.url;
-            const clientProtocol = process.env.CLIENT_PROTOCOL as string;
-            const clientHost = process.env.CLIENT_HOST as string;
-            const baseUrl = `${clientProtocol}://${clientHost}`;
+            const configuration = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
+            const baseUrl = configuration.server.url;
             this.logger.log('baseUrl', baseUrl);
 
             const htmlContent = this.fillTemplate(EMAIL_TEMPLATE.VERIFICATION, {
-                baseUrl,
+                baseUrl: configuration.client.url,
+                serverUrl: configuration.server.url,
                 name,
                 code,
                 email: encodeURIComponent(email),
@@ -175,10 +172,10 @@ export class MailService {
         const { email, name, resetToken, resetUrl } = data;
 
         try {
-            const { server } = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
-            const baseUrl = server.url;
+            const configuration = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
             const htmlContent = this.fillTemplate(EMAIL_TEMPLATE.PASSWORD_RESET, {
-                baseUrl,
+                baseUrl: configuration.client.url,
+                serverUrl: configuration.server.url,
                 name,
                 resetToken,
                 resetUrl,
@@ -203,16 +200,14 @@ export class MailService {
         const { email, name, ticketNumber, status } = data;
 
         try {
-            const { server } = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
-            this.logger.log('server', server);
-            // const baseUrl = server.url;
-            const clientProtocol = process.env.CLIENT_PROTOCOL as string;
-            const clientHost = process.env.CLIENT_HOST as string;
-            const baseUrl = `${clientProtocol}://${clientHost}`;
-            const serverBaseUrl = process.env.SERVER_PROTOCOL + '://' + process.env.SERVER_HOST + ':' + process.env.SERVER_PORT;
+            const configuration = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
+            const baseUrl = configuration.server.url;
+            const serverBaseUrl = configuration.server.url;
+            this.logger.log('baseUrl', baseUrl);
 
             const htmlContent = this.fillTemplate(EMAIL_TEMPLATE.TICKET_CREATION, {
-                baseUrl,
+                baseUrl: configuration.client.url,
+                serverUrl: configuration.server.url,
                 serverBaseUrl,
                 name: name || '',
                 ticketNumber,
@@ -240,11 +235,8 @@ export class MailService {
     public async sendOrderNotification(data: ISendOrderStatusMail): Promise<void> {
         const { email, name } = data;
         try {
-            const { server } = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
-            const baseUrl = server.url;
-            const clientProtocol = process.env.CLIENT_PROTOCOL as string;
-            const clientHost = process.env.CLIENT_HOST as string;
-            const clientUrl = `${clientProtocol}://${clientHost}`; // process.env.CLIENT_URL
+            const configuration = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
+            const clientUrl = configuration.client.url;
 
             const orderUrl = `${clientUrl}/orders`;
 
@@ -254,7 +246,13 @@ export class MailService {
                 details: data.details || '',
                 orderUrl: orderUrl,
             };
-            const htmlContent = this.fillTemplate(EMAIL_TEMPLATE.ORDER_STATUS, { baseUrl, name, email, ...orderDetails });
+            const htmlContent = this.fillTemplate(EMAIL_TEMPLATE.ORDER_STATUS, {
+                baseUrl: configuration.client.url,
+                serverUrl: configuration.server.url,
+                name,
+                email,
+                ...orderDetails,
+            });
             const mailData: ISendMail = {
                 to: email,
                 subject: 'Update on Your Order Status - GRVT MES',
@@ -274,12 +272,11 @@ export class MailService {
         const { ticketId, ticketNumber, ticketType, customerName, customerEmail, ticketSubject, createdAt } = data;
 
         try {
-            const clientProtocol = process.env.CLIENT_PROTOCOL as string;
-            const clientHost = process.env.CLIENT_HOST as string;
-            const baseUrl = `${clientProtocol}://${clientHost}`;
+            const configuration = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
 
             const htmlContent = this.fillTemplate(EMAIL_TEMPLATE.ADMIN_TICKET_NOTIFICATION, {
-                baseUrl,
+                baseUrl: configuration.client.url,
+                serverUrl: configuration.server.url,
                 ticketId,
                 ticketNumber,
                 ticketType,
@@ -308,11 +305,11 @@ export class MailService {
         const { email, firstName, lastName, organizationName, inviterName, roleName, invitationUrl } = data;
 
         try {
-            const { server } = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
-            const baseUrl = server.url;
+            const configuration = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
 
             const htmlContent = this.fillTemplate(EMAIL_TEMPLATE.INVITATION, {
-                baseUrl,
+                baseUrl: configuration.client.url,
+                serverUrl: configuration.server.url,
                 email,
                 firstName,
                 lastName,

@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 import { and, desc, eq, getTableColumns, isNull, sql } from 'drizzle-orm';
 
@@ -12,6 +13,7 @@ import * as Schema from '@/models/schema';
 import { UserSettingsOutput, type PublicUserOutput, type UserInsertInput, type UserSelectOutput, type UserUpdateInput } from '@/models/zod-schemas';
 import { Pagination } from '@/types';
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
+import { API_CONFIG_TOKEN, IAppConfiguration } from '@/config';
 import { JwtUser } from '@/types/jwt.types';
 
 
@@ -35,6 +37,7 @@ export class UsersService extends BaseFilterableService {
         @Inject(forwardRef(() => AttachmentService))
         private readonly attachmentService: AttachmentService,
         private readonly mailService: MailService,
+        private readonly configService: ConfigService,
         private readonly logger: CustomLoggerService,
         filterService: FilterService,
     ) {
@@ -331,17 +334,27 @@ export class UsersService extends BaseFilterableService {
         });
 
         // 5. Send invitation email
-        const clientProtocol = process.env.CLIENT_PROTOCOL as string;
-        const clientHost = process.env.CLIENT_HOST as string;
-        const clientUrl = `${clientProtocol}://${clientHost}`;
+        const configuration = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
+        const { url: clientUrl } = configuration.client;
         const invitationUrl = `${clientUrl}/accept-invitation?token=${invitationToken}&email=${encodeURIComponent(email)}`;
+
+        // Fetch inviter details to ensure we have the names (they might be missing from JWT)
+        let inviterName = `${inviter.firstName} ${inviter.lastName}`.trim();
+        if (!inviter.firstName || !inviter.lastName) {
+            const inviterUser = await this.db.query.user.findFirst({
+                where: eq(Schema.user.id, inviter.id),
+            });
+            if (inviterUser) {
+                inviterName = `${inviterUser.firstName} ${inviterUser.lastName}`.trim();
+            }
+        }
 
         await this.mailService.sendInvitation({
             email,
             firstName,
             lastName,
             organizationName: organization.name,
-            inviterName: `${inviter.firstName} ${inviter.lastName}`,
+            inviterName: inviterName || inviter.email,
             roleName: role.name,
             invitationUrl,
         });
