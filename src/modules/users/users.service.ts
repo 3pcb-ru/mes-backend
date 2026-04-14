@@ -111,7 +111,7 @@ export class UsersService extends BaseFilterableService {
         const result = await this.filterable(this.db, Schema.user, {
             defaultSortColumn: 'createdAt',
         })
-            .where(and(policyWhere, ne(Schema.user.id, user.id)))
+            .where(policyWhere)
             .filter(query)
             .join(Schema.roles, eq(Schema.user.roleId, Schema.roles.id), 'inner')
             .join(Schema.organization, eq(Schema.user.organizationId, Schema.organization.id), 'left')
