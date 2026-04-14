@@ -1,8 +1,8 @@
-import { JwtUser } from '@/types/jwt.types';
 import { ForbiddenException } from '@nestjs/common';
-import { and, eq, or, sql } from 'drizzle-orm';
-import type { SQL } from 'drizzle-orm';
+import { and, eq, or, sql, type SQL } from 'drizzle-orm';
 import type { AnyPgColumn } from 'drizzle-orm/pg-core';
+
+import { JwtUser } from '@/types/jwt.types';
 
 export const TRUE: SQL = sql`1 = 1`;
 export const FALSE: SQL = sql`1 = 0`;
@@ -43,44 +43,44 @@ export abstract class BasePolicy<TTable> {
         this.owner = opts.owner;
     }
 
-    protected hasAll(user: JwtUser, action: string): boolean {
-        return user.permissions.includes(`${this.resource}.${action}.all`);
+    protected hasAll(user: JwtUser | undefined, action: string): boolean {
+        return user?.permissions?.includes(`${this.resource}.${action}.all`) ?? false;
     }
 
-    protected hasBase(user: JwtUser, action: string): boolean {
-        return user.permissions.includes(`${this.resource}.${action}`);
+    protected hasBase(user: JwtUser | undefined, action: string): boolean {
+        return user?.permissions?.includes(`${this.resource}.${action}`) ?? false;
     }
 
     // ---------- Lightweight additive hooks (optional to override) ----------
 
     // Return an extra SQL scope to OR with base read (e.g., tickets.read.quotation)
-    protected async readExtra(_user: JwtUser): Promise<SQL | null> {
+    protected async readExtra(_user: JwtUser | undefined): Promise<SQL | null> {
         return null;
     }
 
     // Return true to allow write even without base perms (e.g., special window)
-    protected async writeExtra(_user: JwtUser): Promise<boolean> {
+    protected async writeExtra(_user: JwtUser | undefined): Promise<boolean> {
         return false;
     }
 
     // Return an extra SQL scope to OR with base update
-    protected async updateExtra(_user: JwtUser): Promise<SQL | null> {
+    protected async updateExtra(_user: JwtUser | undefined): Promise<SQL | null> {
         return null;
     }
 
     // Return an extra SQL scope to OR with base delete
-    protected async deleteExtra(_user: JwtUser): Promise<SQL | null> {
+    protected async deleteExtra(_user: JwtUser | undefined): Promise<SQL | null> {
         return null;
     }
 
     // ---------- Heavyweight override hooks (same signature as public) ----------
 
     // If you override these, you fully control behavior (still may call helpers)
-    protected async readOverride(user: JwtUser, ...extra: SQL[]): Promise<SQL> {
+    protected async readOverride(user: JwtUser | undefined, ...extra: SQL[]): Promise<SQL> {
         // base semantics
         let base: SQL | null = null;
         if (this.hasAll(user, 'read')) base = TRUE;
-        else if (this.hasBase(user, 'read')) base = eq(this.owner(this.table), user.id);
+        else if (this.hasBase(user, 'read') && user?.id) base = eq(this.owner(this.table), user.id);
 
         // additive custom scope
         const custom = await this.readExtra(user);
@@ -93,14 +93,14 @@ export abstract class BasePolicy<TTable> {
         return andAll(combined, ...extra);
     }
 
-    protected async writeOverride(_user: JwtUser): Promise<void> {
+    protected async writeOverride(_user: JwtUser | undefined): Promise<void> {
         // default no-op
     }
 
-    protected async updateOverride(user: JwtUser, ...extra: SQL[]): Promise<SQL> {
+    protected async updateOverride(user: JwtUser | undefined, ...extra: SQL[]): Promise<SQL> {
         let base: SQL | null = null;
         if (this.hasAll(user, 'update')) base = TRUE;
-        else if (this.hasBase(user, 'update')) base = eq(this.owner(this.table), user.id);
+        else if (this.hasBase(user, 'update') && user?.id) base = eq(this.owner(this.table), user.id);
 
         const custom = await this.updateExtra(user);
 
@@ -112,10 +112,10 @@ export abstract class BasePolicy<TTable> {
         return andAll(combined, ...extra);
     }
 
-    protected async deleteOverride(user: JwtUser, ...extra: SQL[]): Promise<SQL> {
+    protected async deleteOverride(user: JwtUser | undefined, ...extra: SQL[]): Promise<SQL> {
         let base: SQL | null = null;
         if (this.hasAll(user, 'delete')) base = TRUE;
-        else if (this.hasBase(user, 'delete')) base = eq(this.owner(this.table), user.id);
+        else if (this.hasBase(user, 'delete') && user?.id) base = eq(this.owner(this.table), user.id);
 
         const custom = await this.deleteExtra(user);
 
@@ -129,11 +129,11 @@ export abstract class BasePolicy<TTable> {
 
     // ---------- Public API (unchanged signatures) ----------
 
-    async read(user: JwtUser, ...extra: SQL[]): Promise<SQL> {
+    async read(user: JwtUser | undefined, ...extra: SQL[]): Promise<SQL> {
         return this.readOverride(user, ...extra);
     }
 
-    async canWrite(user: JwtUser): Promise<void> {
+    async canWrite(user: JwtUser | undefined): Promise<void> {
         // 1) lightweight path
         if (await this.writeExtra(user)) return;
 
@@ -146,11 +146,11 @@ export abstract class BasePolicy<TTable> {
         throw new ForbiddenException(`Cannot write ${this.resource}`);
     }
 
-    async update(user: JwtUser, ...extra: SQL[]): Promise<SQL> {
+    async update(user: JwtUser | undefined, ...extra: SQL[]): Promise<SQL> {
         return this.updateOverride(user, ...extra);
     }
 
-    async delete(user: JwtUser, ...extra: SQL[]): Promise<SQL> {
+    async delete(user: JwtUser | undefined, ...extra: SQL[]): Promise<SQL> {
         return this.deleteOverride(user, ...extra);
     }
 }
