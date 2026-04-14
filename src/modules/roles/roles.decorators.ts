@@ -14,7 +14,7 @@ import {
     RolePaginatedApiResponseDto,
     RoleWithPermissionsApiResponseDTO,
     RoleWithPermissionsLookupApiResponseDTO,
-    UpdateRolePermissionApiResponseDto,
+    BooleanApiResponseDto,
 } from './roles.dto';
 
 const rolesEndpointConfig = {
@@ -72,7 +72,7 @@ const rolesEndpointConfig = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.roles.ChangePermissions),
             ApiOperation({ summary: 'Update role permissions' }),
-            ZodResponse({ status: 200, type: UpdateRolePermissionApiResponseDto }),
+            ZodResponse({ status: 200, type: BooleanApiResponseDto }),
         ),
     'update-details': () =>
         applyDecorators(
@@ -93,7 +93,7 @@ const rolesEndpointConfig = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.roles.Delete),
             ApiOperation({ summary: 'Delete a custom role' }),
-            ZodResponse({ status: 200, type: RoleApiResponseDto }),
+            ZodResponse({ status: 200, type: BooleanApiResponseDto }),
         ),
 } as const;
 

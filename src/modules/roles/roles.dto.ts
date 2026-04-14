@@ -7,7 +7,7 @@ import { permissionSelectSchema, roleSelectSchema, roleUpdateSchema, userSelectS
 
 //Input Schemas
 export const updateRolePermissionsSchema = z.object({
-    permissionIds: z.array(z.string()),
+    permissionIds: z.array(z.string().nullable()).transform((val) => val.filter((v): v is string => v !== null)),
 });
 
 export const updateRoleDetailsSchema = roleUpdateSchema.pick({
@@ -47,5 +47,5 @@ export class RoleWithPermissionsApiResponseDTO extends createApiResponseDto(role
 export class RoleWithPermissionsLookupApiResponseDTO extends createApiResponseDto(z.array(roleWithPermissionsListResponseSchema)) {}
 export class RolePaginatedApiResponseDto extends createApiPaginatedResponseDto(roleSelectSchema) {}
 export class PermissionsListApiResponseDto extends createApiResponseDto(z.array(permissionSelectSchema)) {}
-export class UpdateRolePermissionApiResponseDto extends createApiResponseDto(z.boolean()) {}
+export class BooleanApiResponseDto extends createApiResponseDto(z.boolean()) {}
 export class AssignRoleApiResponseDto extends createApiResponseDto(userSelectSchema) {}

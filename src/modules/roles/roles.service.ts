@@ -131,7 +131,7 @@ export class RolesService extends BaseFilterableService {
         const [updatedUser] = await this.db.update(userSchema).set({ roleId }).where(eq(userSchema.id, userId)).returning();
 
         if (!updatedUser) {
-            throw new InternalServerErrorException('An error occured while updating user');
+            throw new InternalServerErrorException('An error occurred while updating user');
         }
 
         //Event role change event, and auth listener will logout the user. (We cannot directly use AuthService because of circular dependencies.)
@@ -153,7 +153,7 @@ export class RolesService extends BaseFilterableService {
         const [newRole] = await this.db.insert(roleSchema).values(roleData).returning();
 
         if (!newRole) {
-            throw new InternalServerErrorException('An error occured while creating role');
+            throw new InternalServerErrorException('An error occurred while creating role');
         }
 
         return newRole;
@@ -191,7 +191,7 @@ export class RolesService extends BaseFilterableService {
 
     async lookup(user: JwtUser) {
         const rolesWithPermissions = await this.db.query.roles.findMany({
-            where: or(isNull(roleSchema.organizationId), eq(roleSchema.organizationId, user.organizationId)),
+            where: and(isNull(roleSchema.deletedAt), or(isNull(roleSchema.organizationId), eq(roleSchema.organizationId, user.organizationId))),
             with: {
                 rolePermissions: {
                     columns: {},
@@ -222,7 +222,7 @@ export class RolesService extends BaseFilterableService {
             defaultSortColumn: 'createdAt',
         })
             .filter(query)
-            .where(or(isNull(roleSchema.organizationId), eq(roleSchema.organizationId, user.organizationId)))
+            .where(and(isNull(roleSchema.deletedAt), or(isNull(roleSchema.organizationId), eq(roleSchema.organizationId, user.organizationId))))
             .orderByFromQuery(query, 'createdAt')
             .paginate(query)
             .select();
@@ -232,7 +232,7 @@ export class RolesService extends BaseFilterableService {
 
     async findOne(roleId: string, user: JwtUser) {
         const role = await this.db.query.roles.findFirst({
-            where: and(eq(roleSchema.id, roleId), or(isNull(roleSchema.organizationId), eq(roleSchema.organizationId, user.organizationId))),
+            where: and(eq(roleSchema.id, roleId), isNull(roleSchema.deletedAt), or(isNull(roleSchema.organizationId), eq(roleSchema.organizationId, user.organizationId))),
         });
 
         if (!role) {
@@ -244,7 +244,7 @@ export class RolesService extends BaseFilterableService {
 
     async findOneWithPermissions(roleId: string, user: JwtUser) {
         const role = await this.db.query.roles.findFirst({
-            where: and(eq(roleSchema.id, roleId), or(isNull(roleSchema.organizationId), eq(roleSchema.organizationId, user.organizationId))),
+            where: and(eq(roleSchema.id, roleId), isNull(roleSchema.deletedAt), or(isNull(roleSchema.organizationId), eq(roleSchema.organizationId, user.organizationId))),
             with: {
                 rolePermissions: {
                     columns: {
@@ -304,15 +304,17 @@ export class RolesService extends BaseFilterableService {
             throw new BadRequestException('System roles cannot be modified.');
         }
 
-        const uniqueNewIds = Array.from(new Set(newPermissionIds));
+        const uniqueNewNames = Array.from(new Set(newPermissionIds));
         await dbInstance.transaction(async (tx) => {
             const permissionsDb = await tx.query.permissions.findMany({
-                where: inArray(permissions.id, uniqueNewIds),
+                where: inArray(permissions.name, uniqueNewNames),
             });
 
-            if (permissionsDb?.length !== newPermissionIds.length) {
-                throw new BadRequestException('Provided permission ids has no corresponding permissions.');
+            if (permissionsDb?.length !== uniqueNewNames.length) {
+                throw new BadRequestException('Provided permission names have no corresponding permissions.');
             }
+
+            const resolvedIds = permissionsDb.map((p) => p.id);
 
             const existingPermissions = await tx.query.rolePermissions.findMany({
                 where: eq(rolePermissionsSchema.roleId, roleId),
@@ -324,13 +326,13 @@ export class RolesService extends BaseFilterableService {
             const existingPermIds = new Set(existingPermissions.map((rp) => rp.permissionId));
 
             // Delete any perms no longer present
-            const toDelete = [...existingPermIds].filter((id) => !uniqueNewIds.includes(id));
+            const toDelete = [...existingPermIds].filter((id) => !resolvedIds.includes(id));
             if (toDelete.length) {
                 await tx.delete(rolePermissionsSchema).where(and(eq(rolePermissionsSchema.roleId, roleId), inArray(rolePermissionsSchema.permissionId, toDelete)));
             }
 
             // Insert any missing assignments
-            const toInsert = uniqueNewIds.filter((id) => !existingPermIds.has(id)).map((id) => ({ roleId, permissionId: id }));
+            const toInsert = resolvedIds.filter((id) => !existingPermIds.has(id)).map((id) => ({ roleId, permissionId: id }));
             if (toInsert.length) {
                 await tx.insert(rolePermissionsSchema).values(toInsert);
             }
@@ -358,7 +360,7 @@ export class RolesService extends BaseFilterableService {
         const [deleted] = await this.db.update(roleSchema).set({ deletedAt: new Date() }).where(eq(roleSchema.id, roleId)).returning();
 
         if (!deleted) {
-            throw new InternalServerErrorException('An error occured while deleting role.');
+            throw new InternalServerErrorException('An error occurred while deleting role.');
         }
 
         return deleted;
