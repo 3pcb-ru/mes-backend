@@ -373,7 +373,7 @@ export class UsersService extends BaseFilterableService {
         return this.findOne(createdUser.id, inviter);
     }
 
-    async updateStatus(id: string, body: UpdateUserStatusDto, requester: JwtUser): Promise<UserSelectOutput> {
+    async updateStatus(id: string, body: UpdateUserStatusDto, requester: JwtUser): Promise<PublicUserOutput> {
         const { status } = body;
 
         // Rule 1: Cannot deactivate/activate own account
@@ -397,9 +397,11 @@ export class UsersService extends BaseFilterableService {
 
         // Perform the status update
         if (status === 'inactive') {
-            return this.softDelete(id);
+            await this.softDelete(id);
         } else {
-            return this.restore(id);
+            await this.restore(id);
         }
+
+        return this.findOne(id, requester);
     }
 }
