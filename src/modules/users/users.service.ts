@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, ForbiddenException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { and, desc, eq, getTableColumns, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, getTableColumns, isNull, ne, sql } from 'drizzle-orm';
 
 import { StorageService } from '@/app/services/storage/storage.service';
 import { PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
@@ -106,17 +106,19 @@ export class UsersService extends BaseFilterableService {
     async list(query: PaginatedFilterQueryDto, user: JwtUser): Promise<{ data: PublicUserOutput[] } & Pagination> {
         const policyWhere = await this.usersPolicy.read(user);
 
+        const { password: _, verificationToken: __, deletedAt: ___, ...userFields } = getTableColumns(Schema.user);
+
         const result = await this.filterable(this.db, Schema.user, {
             defaultSortColumn: 'createdAt',
         })
-            .where(policyWhere)
+            .where(and(policyWhere, ne(Schema.user.id, user.id)))
             .filter(query)
             .join(Schema.roles, eq(Schema.user.roleId, Schema.roles.id), 'inner')
             .join(Schema.organization, eq(Schema.user.organizationId, Schema.organization.id), 'left')
             .orderByFromQuery(query, 'createdAt')
             .paginate(query)
             .selectFields({
-                ...getTableColumns(Schema.user),
+                ...userFields,
                 role: getTableColumns(Schema.roles),
                 organization: getTableColumns(Schema.organization),
             });
@@ -160,6 +162,7 @@ export class UsersService extends BaseFilterableService {
             .select({
                 ...getTableColumns(Schema.user),
                 role: Schema.roles,
+                organization: Schema.organization,
             })
             .from(Schema.user)
             .innerJoin(Schema.roles, eq(Schema.user.roleId, Schema.roles.id))
@@ -170,7 +173,17 @@ export class UsersService extends BaseFilterableService {
     }
 
     async findByVerificationToken(token: string): Promise<UserSelectOutput | null> {
-        const [user] = await this.db.select().from(Schema.user).where(eq(Schema.user.verificationToken, token)).limit(1);
+        const [user] = await this.db
+            .select({
+                ...getTableColumns(Schema.user),
+                role: Schema.roles,
+                organization: Schema.organization,
+            })
+            .from(Schema.user)
+            .innerJoin(Schema.roles, eq(Schema.user.roleId, Schema.roles.id))
+            .leftJoin(Schema.organization, eq(Schema.user.organizationId, Schema.organization.id))
+            .where(eq(Schema.user.verificationToken, token))
+            .limit(1);
         return user || null;
     }
 

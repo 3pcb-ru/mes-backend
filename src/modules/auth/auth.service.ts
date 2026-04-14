@@ -606,11 +606,12 @@ export class AuthService {
         const userSettings = await this.usersService.getUserSettings(user.id);
         const tokenData = await this.setToken(user.id, user.email, user.roleId, user.organizationId!);
 
-        const { verificationToken: _, password: __, deletedAt: ___, ...userData } = user;
+        const updatedUser = await this.usersService.findOne(user.id);
+
         return {
             accessToken: tokenData.accessToken,
             refreshToken: tokenData.refreshToken,
-            user: userData,
+            user: updatedUser,
             settings: userSettings,
             isVerified: true,
             message: 'Invitation accepted successfully',
