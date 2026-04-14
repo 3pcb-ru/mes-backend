@@ -21,18 +21,18 @@ export class UsersPolicy extends BasePolicy<typeof userSchema> {
      * - `users.read`     → see only users in the same organization
      */
     protected override async readOverride(user: JwtUser, ...extra: SQL[]): Promise<SQL> {
-        if (this.hasAll(user, 'read')) {
-            // Admin: unrestricted
-            return andAll(TRUE, ...extra);
-        }
-
-        if (this.hasBase(user, 'read') && user.organizationId) {
-            // Org owner/member: scope to same organization
+        // Strict isolation: always scope to organization if present
+        if (user.organizationId) {
             const orgScope = eq(this.owner(this.table), user.organizationId);
             return andAll(orgScope, ...extra);
         }
 
-        // Fallback: can only see own record
+        // Fallback for users without an organization (e.g. system admins if applicable)
+        if (this.hasAll(user, 'read')) {
+            return andAll(TRUE, ...extra);
+        }
+
+        // Can only see own record
         const selfScope = eq(userSchema.id, user.id);
         return andAll(selfScope, ...extra);
     }

@@ -1,30 +1,27 @@
 import { BadRequestException, ConflictException, ForbiddenException, forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
+import bcrypt from 'bcrypt';
 import { and, desc, eq, getTableColumns, isNull, ne, sql } from 'drizzle-orm';
 
+import { CustomLoggerService } from '@/app/services/logger/logger.service';
+import { MailService } from '@/app/services/mail/mail.service';
 import { StorageService } from '@/app/services/storage/storage.service';
+import { OTP_LENGTH } from '@/common/constants';
 import { PaginatedFilterQueryDto } from '@/common/dto/filter.dto';
 import { FILE_TYPE } from '@/common/enums';
 import { BaseFilterableService } from '@/common/services/base-filterable.service';
 import { FilterService } from '@/common/services/filter.service';
+import { API_CONFIG_TOKEN, IAppConfiguration } from '@/config';
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 import { UserSettingsOutput, type PublicUserOutput, type UserInsertInput, type UserSelectOutput, type UserUpdateInput } from '@/models/zod-schemas';
 import { Pagination } from '@/types';
-import { CustomLoggerService } from '@/app/services/logger/logger.service';
-import { API_CONFIG_TOKEN, IAppConfiguration } from '@/config';
 import { JwtUser } from '@/types/jwt.types';
-
+import { RandomStringGenerator } from '@/utils/random';
 
 import { AttachmentService } from '../attachments/attachment.service';
-import { MailService } from '@/app/services/mail/mail.service';
-import { RandomStringGenerator } from '@/utils/random';
 import { InviteUserDto, UpdateUserProfileDto, UpdateUserStatusDto } from './users.dto';
-
 import { UsersPolicy } from './users.policy';
-import { OTP_LENGTH } from '@/common/constants';
-import bcrypt from 'bcrypt';
 
 @Injectable()
 export class UsersService extends BaseFilterableService {
@@ -45,7 +42,6 @@ export class UsersService extends BaseFilterableService {
         this.logger.setContext(UsersService.name);
         this.db = this.drizzle.database;
     }
-
 
     private async bindUrls(user: any, reqUser?: JwtUser): Promise<PublicUserOutput> {
         if (!user) return user;
@@ -111,7 +107,7 @@ export class UsersService extends BaseFilterableService {
         const result = await this.filterable(this.db, Schema.user, {
             defaultSortColumn: 'createdAt',
         })
-            .where(policyWhere)
+            .where(and(policyWhere, ne(Schema.user.id, user.id)))
             .filter(query)
             .join(Schema.roles, eq(Schema.user.roleId, Schema.roles.id), 'inner')
             .join(Schema.organization, eq(Schema.user.organizationId, Schema.organization.id), 'left')
@@ -224,8 +220,8 @@ export class UsersService extends BaseFilterableService {
             const [updated] = await this.db.update(Schema.user).set(updateData).where(policyWhere).returning();
 
             if (!updated) {
-                //We are throwing 404 here, mostly because security reasons. This condition will be hitted because of the permissions almost all of the time.
-                throw new NotFoundException('No user found to match update criterias');
+                //We are throwing 404 here, mostly because security reasons. This condition will be hit because of the permissions almost all of the time.
+                throw new NotFoundException('No user found to match update criteria');
             }
 
             const [updatedUser] = await this.db
@@ -377,7 +373,6 @@ export class UsersService extends BaseFilterableService {
         return this.findOne(createdUser.id, inviter);
     }
 
-
     async updateStatus(id: string, body: UpdateUserStatusDto, requester: JwtUser): Promise<UserSelectOutput> {
         const { status } = body;
 
@@ -408,5 +403,3 @@ export class UsersService extends BaseFilterableService {
         }
     }
 }
-
-
