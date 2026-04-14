@@ -278,7 +278,7 @@ export class UsersService extends BaseFilterableService {
         return settings || null;
     }
 
-    async inviteUser(data: InviteUserDto, inviter: JwtUser): Promise<void> {
+    async inviteUser(data: InviteUserDto, inviter: JwtUser): Promise<PublicUserOutput> {
         const { email, firstName, lastName, roleId } = data;
 
         // 1. Check if user already exists
@@ -307,8 +307,8 @@ export class UsersService extends BaseFilterableService {
         const invitationToken = RandomStringGenerator.generateSecure(OTP_LENGTH, 'numeric');
         const placeholderPassword = await bcrypt.hash(RandomStringGenerator.generateSecure(32), 10);
 
-        await this.db.transaction(async (tx) => {
-            const [createdUser] = await tx
+        const createdUser = await this.db.transaction(async (tx) => {
+            const [user] = await tx
                 .insert(Schema.user)
                 .values({
                     email,
@@ -323,9 +323,11 @@ export class UsersService extends BaseFilterableService {
                 .returning();
 
             await tx.insert(Schema.userSettings).values({
-                userId: createdUser.id,
+                userId: user.id,
                 consent: false,
             });
+
+            return user;
         });
 
         // 5. Send invitation email
@@ -345,6 +347,8 @@ export class UsersService extends BaseFilterableService {
         });
 
         this.logger.log(`User ${email} invited to organization ${organization.name} by ${inviter.email}`);
+
+        return this.findOne(createdUser.id, inviter);
     }
 
 

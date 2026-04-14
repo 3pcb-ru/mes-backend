@@ -70,8 +70,8 @@ export class UsersController {
         if (!currentUser.organizationId) {
             throw new ForbiddenException('You must belong to an organization to invite users');
         }
-        await this.usersService.inviteUser(inviteData, currentUser);
-        return ok({}).message('Invitation sent successfully');
+        const user = await this.usersService.inviteUser(inviteData, currentUser);
+        return ok(user).message('Invitation sent successfully');
     }
 
     @Patch(':userId/status')
