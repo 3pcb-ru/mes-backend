@@ -2,24 +2,25 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
+import { BaseFilterableService } from '@/common/services/base-filterable.service';
+import { FilterService } from '@/common/services/filter.service';
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 import { JwtUser } from '@/types/jwt.types';
 
+import { CreateMaterialDto, CreateRevisionDto, ListBomQueryDto, UpdateMaterialDto } from './bom.dto';
 import { BomMaterialPolicy, BomPolicy } from './bom.policy';
-import { CreateMaterialDto } from './dto/create-material.dto';
-import { CreateRevisionDto } from './dto/create-revision.dto';
-import { UpdateMaterialDto } from './dto/update-material.dto';
 
 @Injectable()
-export class BomService {
-    private readonly policy = new BomPolicy();
-    private readonly materialPolicy = new BomMaterialPolicy();
-
+export class BomService extends BaseFilterableService {
     constructor(
         private readonly drizzle: DrizzleService,
         private readonly logger: CustomLoggerService,
+        private readonly policy: BomPolicy,
+        private readonly materialPolicy: BomMaterialPolicy,
+        filterService: FilterService,
     ) {
+        super(filterService);
         this.logger.setContext(BomService.name);
     }
 
@@ -29,22 +30,20 @@ export class BomService {
 
     // --- REVISIONS ---
 
-    async getRevisions(productId: string, user: JwtUser) {
+    async getRevisions(productId: string, query: ListBomQueryDto, user: JwtUser) {
         const policyWhere = await this.policy.read(user, eq(Schema.bomRevision.productId, productId), isNull(Schema.bomRevision.deletedAt));
-        return await this.db.query.bomRevision.findMany({
-            where: policyWhere,
-            orderBy: [desc(Schema.bomRevision.version)],
-            with: {
-                materials: {
-                    where: isNull(Schema.bomMaterial.deletedAt),
-                    with: {
-                        item: true,
-                    },
-                },
-                submittedBy: true,
-                approvedBy: true,
-            },
-        });
+
+        return await this.filterable(this.db, Schema.bomRevision, {
+            defaultSortColumn: 'version',
+            defaultSortOrder: 'desc',
+        })
+            .where(policyWhere)
+            .filter(query)
+            .orderByFromQuery(query, 'version')
+            .paginate(query)
+            .selectFields({
+                ...Schema.bomRevision,
+            });
     }
 
     async createRevision(productId: string, dto: CreateRevisionDto, user: JwtUser) {
@@ -152,7 +151,7 @@ export class BomService {
     }
 
     async updateRevision(productId: string, revisionId: string, version: string, user: JwtUser) {
-        const _rev = await this.ensureDraft(revisionId, user);
+        await this.ensureDraft(revisionId, user);
         const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
         const [updated] = await this.db.update(Schema.bomRevision).set({ version, updatedAt: new Date() }).where(policyWhere).returning();
         return updated;
@@ -174,7 +173,7 @@ export class BomService {
     }
 
     async submitRevision(revisionId: string, user: JwtUser) {
-        const _rev = await this.ensureDraft(revisionId, user);
+        await this.ensureDraft(revisionId, user);
         const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
         await this.db
             .update(Schema.bomRevision)
@@ -228,14 +227,19 @@ export class BomService {
 
     // --- MATERIALS ---
 
-    async getMaterials(revisionId: string, user: JwtUser) {
+    async getMaterials(revisionId: string, query: ListBomQueryDto, user: JwtUser) {
         const policyWhere = await this.materialPolicy.read(user, eq(Schema.bomMaterial.bomRevisionId, revisionId), isNull(Schema.bomMaterial.deletedAt));
-        return await this.db.query.bomMaterial.findMany({
-            where: policyWhere,
-            with: {
-                item: true,
-            },
-        });
+
+        return await this.filterable(this.db, Schema.bomMaterial, {
+            defaultSortColumn: 'createdAt',
+        })
+            .where(policyWhere)
+            .filter(query)
+            .orderByFromQuery(query, 'createdAt')
+            .paginate(query)
+            .selectFields({
+                ...Schema.bomMaterial,
+            });
     }
 
     async addMaterial(revisionId: string, dto: CreateMaterialDto, user: JwtUser) {

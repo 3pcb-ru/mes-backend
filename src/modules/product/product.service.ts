@@ -2,36 +2,46 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { and, eq, isNull } from 'drizzle-orm';
 
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
+import { BaseFilterableService } from '@/common/services/base-filterable.service';
+import { FilterService } from '@/common/services/filter.service';
 import { DrizzleService } from '@/models/model.service';
 import { bomRevision } from '@/models/schema/bom.schema';
 import { product } from '@/models/schema/product.schema';
-
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { ProductPolicy } from './product.policy';
 import { JwtUser } from '@/types/jwt.types';
 
-@Injectable()
-export class ProductService {
-    private readonly policy = new ProductPolicy();
+import { CreateProductDto, ListProductsQueryDto, UpdateProductDto } from './product.dto';
+import { ProductPolicy } from './product.policy';
 
+@Injectable()
+export class ProductService extends BaseFilterableService {
     constructor(
         private readonly drizzleService: DrizzleService,
         private readonly logger: CustomLoggerService,
+        private readonly policy: ProductPolicy,
+        filterService: FilterService,
     ) {
+        super(filterService);
         this.logger.setContext(ProductService.name);
     }
 
-    async list(user: JwtUser) {
+    private get db() {
+        return this.drizzleService.database;
+    }
+
+    async list(query: ListProductsQueryDto, user: JwtUser) {
         const policyWhere = await this.policy.read(user, isNull(product.deletedAt));
-        const data = await this.drizzleService.database.query.product.findMany({
-            where: policyWhere,
-        });
-        return { data };
+        return await this.filterable(this.db, product, {
+            defaultSortColumn: 'createdAt',
+        })
+            .where(policyWhere)
+            .filter(query)
+            .orderByFromQuery(query, 'createdAt')
+            .paginate(query)
+            .select();
     }
 
     async create(payload: CreateProductDto, organizationId: string) {
-        const [p] = await this.drizzleService.database
+        const [p] = await this.db
             .insert(product)
             .values({
                 sku: payload.sku,
@@ -44,7 +54,7 @@ export class ProductService {
 
     async findOne(id: string, user: JwtUser) {
         const policyWhere = await this.policy.read(user, eq(product.id, id), isNull(product.deletedAt));
-        const p = await this.drizzleService.database.query.product.findFirst({
+        const p = await this.db.query.product.findFirst({
             where: policyWhere,
             with: {
                 revisions: true,
@@ -56,7 +66,7 @@ export class ProductService {
 
     async update(id: string, payload: UpdateProductDto, user: JwtUser) {
         const policyWhere = await this.policy.update(user, eq(product.id, id), isNull(product.deletedAt));
-        const [p] = await this.drizzleService.database
+        const [p] = await this.db
             .update(product)
             .set({ ...payload, updatedAt: new Date() })
             .where(policyWhere)
@@ -67,15 +77,15 @@ export class ProductService {
 
     async delete(id: string, user: JwtUser) {
         const readWhere = await this.policy.read(user, eq(product.id, id), isNull(product.deletedAt));
-        
+
         // Ensure user can read the product before checking active revisions
-        const existingProduct = await this.drizzleService.database.query.product.findFirst({
+        const existingProduct = await this.db.query.product.findFirst({
             where: readWhere,
         });
 
         if (!existingProduct) throw new NotFoundException('Product not found');
 
-        const activeRevision = await this.drizzleService.database.query.bomRevision.findFirst({
+        const activeRevision = await this.db.query.bomRevision.findFirst({
             where: and(eq(bomRevision.productId, id), eq(bomRevision.status, 'active')),
         });
 
@@ -84,11 +94,7 @@ export class ProductService {
         }
 
         const deleteWhere = await this.policy.delete(user, eq(product.id, id), isNull(product.deletedAt));
-        const [p] = await this.drizzleService.database
-            .update(product)
-            .set({ deletedAt: new Date(), updatedAt: new Date() })
-            .where(deleteWhere)
-            .returning();
+        const [p] = await this.db.update(product).set({ deletedAt: new Date(), updatedAt: new Date() }).where(deleteWhere).returning();
         if (!p) throw new NotFoundException('Product not found');
         return p;
     }

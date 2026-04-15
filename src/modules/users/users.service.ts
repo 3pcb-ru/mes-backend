@@ -43,7 +43,7 @@ export class UsersService extends BaseFilterableService {
         this.db = this.drizzle.database;
     }
 
-    private async bindUrls(user: any, reqUser?: JwtUser): Promise<PublicUserOutput> {
+    private async bindUrls(user: PublicUserOutput, reqUser?: JwtUser): Promise<PublicUserOutput> {
         if (!user) return user;
 
         // Fetch user avatar
@@ -256,7 +256,7 @@ export class UsersService extends BaseFilterableService {
             }
 
             // Handle database errors
-            throw new Error(`Failed to update user: ${error.message}`, { cause: error });
+            throw new BadRequestException(`Failed to update user: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 

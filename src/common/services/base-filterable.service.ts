@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { FilterService } from '@/common/services/filter.service';
-import { AnyPgTable, PgView, PgViewWithSelection } from 'drizzle-orm/pg-core';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { AnyPgTable, PgView, PgViewWithSelection } from 'drizzle-orm/pg-core';
+
+import { FilterService } from '@/common/services/filter.service';
+
 import { FilterableQueryBuilder } from './filterable-query.builder';
 
 @Injectable()
@@ -13,6 +15,7 @@ export abstract class BaseFilterableService {
         table: T,
         options?: {
             defaultSortColumn?: string | any;
+            defaultSortOrder?: 'asc' | 'desc';
             countDistinctOn?: any; // pass Schema.table.id if joins can duplicate rows
         },
     ) {

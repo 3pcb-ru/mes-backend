@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '@/common/decorators/user.decorator';
@@ -6,8 +6,8 @@ import { JwtUser } from '@/types/jwt.types';
 import { ok } from '@/utils';
 
 import { BomDecorators } from './bom.decorators';
+import { CreateRevisionDto, ListBomQueryDto } from './bom.dto';
 import { BomService } from './bom.service';
-import { CreateRevisionDto } from './dto/create-revision.dto';
 
 @ApiTags('BOM')
 @ApiBearerAuth()
@@ -17,8 +17,9 @@ export class RevisionController {
 
     @Get()
     @BomDecorators.getRevisions()
-    async getRevisions(@Param('productId') productId: string, @CurrentUser() user: JwtUser) {
-        return ok(await this.bomService.getRevisions(productId, user)).message('Revisions retrieved successfully');
+    async getRevisions(@Param('productId') productId: string, @Query() query: ListBomQueryDto, @CurrentUser() user: JwtUser) {
+        const result = await this.bomService.getRevisions(productId, query, user);
+        return ok(result.data).message('Revisions retrieved successfully').paginate(result);
     }
 
     @Post()

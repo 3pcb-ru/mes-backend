@@ -1,12 +1,13 @@
 import { applyDecorators, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ZodResponse } from 'nestjs-zod';
 
 import { Permissions } from '@/common/permissions';
 import { RequiresPermissions } from '@/modules/auth/decorators/permission.decorator';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '@/modules/auth/guards/permission.guard';
 
-import { BomMaterialDetailResponseDto, BomMaterialListResponseDto, BomRevisionDetailResponseDto, BomRevisionListResponseDto } from './dto/bom-response.dto';
+import { BomMaterialDetailResponseDto, BomMaterialListResponseDto, BomRevisionDetailResponseDto, BomRevisionListResponseDto } from './bom.dto';
 
 export const BomDecorators = {
     // --- Revisions ---
@@ -15,7 +16,7 @@ export const BomDecorators = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.bom.Read),
             ApiOperation({ summary: 'List all revisions for a product' }),
-            ApiResponse({ status: 200, type: BomRevisionListResponseDto }),
+            ZodResponse({ status: 200, type: BomRevisionListResponseDto }),
         ),
 
     createRevision: () =>
@@ -23,7 +24,7 @@ export const BomDecorators = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.bom.Write),
             ApiOperation({ summary: 'Create a new major revision' }),
-            ApiResponse({ status: 201, type: BomRevisionDetailResponseDto }),
+            ZodResponse({ status: 201, type: BomRevisionDetailResponseDto }),
         ),
 
     createAlternative: () =>
@@ -31,7 +32,7 @@ export const BomDecorators = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.bom.Write),
             ApiOperation({ summary: 'Create an alternative (minor) revision' }),
-            ApiResponse({ status: 201, type: BomRevisionDetailResponseDto }),
+            ZodResponse({ status: 201, type: BomRevisionDetailResponseDto }),
         ),
 
     updateRevision: () =>
@@ -39,7 +40,7 @@ export const BomDecorators = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.bom.Update),
             ApiOperation({ summary: 'Update revision version (Draft only)' }),
-            ApiResponse({ status: 200, type: BomRevisionDetailResponseDto }),
+            ZodResponse({ status: 200, type: BomRevisionDetailResponseDto }),
         ),
 
     deleteRevision: () =>
@@ -80,7 +81,7 @@ export const BomDecorators = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.bom.Read),
             ApiOperation({ summary: 'List all materials for a revision' }),
-            ApiResponse({ status: 200, type: BomMaterialListResponseDto }),
+            ZodResponse({ status: 200, type: BomMaterialListResponseDto }),
         ),
 
     addMaterial: () =>
@@ -88,7 +89,7 @@ export const BomDecorators = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.bom.Update),
             ApiOperation({ summary: 'Add a material to a revision (Draft only)' }),
-            ApiResponse({ status: 201, type: BomMaterialDetailResponseDto }),
+            ZodResponse({ status: 201, type: BomMaterialDetailResponseDto }),
         ),
 
     updateMaterial: () =>
@@ -96,7 +97,7 @@ export const BomDecorators = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.bom.Update),
             ApiOperation({ summary: 'Update material (Draft only)' }),
-            ApiResponse({ status: 200, type: BomMaterialDetailResponseDto }),
+            ZodResponse({ status: 200, type: BomMaterialDetailResponseDto }),
         ),
 
     deleteMaterial: () =>

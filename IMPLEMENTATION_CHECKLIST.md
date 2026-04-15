@@ -15,6 +15,7 @@
 | ORM              | Drizzle ORM                        | 0.45              |
 | DB               | PostgreSQL (via `pg` pool)         | ≥14               |
 | Cache / Sessions | Redis (`ioredis`)                  | 5.x               |
+| Background Jobs  | BullMQ (with Redis)                | —                 |
 | Validation       | Zod +`nestjs-zod`                  | zod 4.x           |
 | Auth             | JWT + Passport (`passport-jwt`)    | —                 |
 | Storage          | MinIO                              | `minio` 8.x       |
@@ -78,6 +79,7 @@
 - [ ] If adding permissions: update `src/common/permissions.ts` AND `src/models/seeder/permission-seeder.service.ts` AND run `pnpm db:seed-permissions` in prod.
 - [ ] Relations in `src/models/schema/relations.ts` are updated to reflect new FK links.
 - [ ] Zod schemas in `src/models/zod-schemas/index.ts` are updated if new table added.
+- [ ] **Audit & Traceability**: Critical business entities (Work Orders, BOM, execution data) MUST have a corresponding audit trail in the `LogTraceability` model or dedicated audit table.
 
 ---
 
@@ -111,6 +113,7 @@ src/modules/<feature>/
 - [ ] `@CurrentUser() user: JwtUser` parameter is used where user context is needed.
 - [ ] Route returns `ok(data).message('...')` — never raw objects.
 - [ ] Pagination responses: `ok(result.data).message('...').paginate({ total, page, limit })`.
+- [ ] **Swagger Coverage**: Entire API surface (all requests, validation rules, possible responses, and schemas) must be fully documented using Swagger decorators.
 - [ ] Manual ownership checks in controller (e.g., `userId !== reqUser.id && !reqUser.permissions.includes(...)`) are kept for business logic not expressible in policy SQL.
 - [ ] HTTP verbs are semantically correct: `GET` read, `POST` create, `PUT` full update, `PATCH` partial update, `DELETE` remove.
 
@@ -130,6 +133,9 @@ src/modules/<feature>/
 - [ ] `NotFoundException` is used when resource doesn't exist (not `null` returns from controller).
 - [ ] `ConflictException` for duplicates (especially email/unique constraint violations).
 - [ ] DB constraint error codes are caught and mapped: `23505` → `ConflictException`.
+- [ ] **Concurrency & Locking**: For high-frequency data (PLC triggers, scanners), use pessimistic locking with `.forUpdate()` inside transactions to prevent race conditions.
+- [ ] **Background Jobs**: Long-running tasks (heavy reports, MinIO batch processing) MUST be offloaded to BullMQ workers.
+- [ ] **Traceability Logging**: Every entity mutation (create/update/delete) must invoke the traceability service to log "who changed what" at the row level.
 - [ ] Error propagation: never swallow exceptions silently. Log them with `this.logger.error(...)`.
 
 ---
@@ -150,6 +156,7 @@ src/modules/<feature>/
 ### Response DTOs
 
 - [ ] One response DTO per endpoint type: single item `createApiResponseSchema(entitySchema)`, list `createApiPaginatedResponseSchema(entitySchema)`.
+- [ ] **Swagger Decorators**: Every field in a Response DTO must have an `@ApiProperty()` decorator with exhaustive documentation (description, example, type).
 - [ ] Response DTO is registered via `ZodResponse({ status: 200, type: XxxApiResponseDto })` in the decorator.
 - [ ] `publicUserSelectSchema` is used for user responses (omits `password`, `verificationToken`, `deletedAt`, adds `role`, `organization`, `avatarUrl`).
 - [ ] Never expose `password` or `verificationToken` fields in any response shape.
@@ -213,6 +220,7 @@ src/modules/<feature>/
 
 - [ ] List endpoints extend `BaseFilterableService` and call `this.filterable(this.db, table, opts)`.
 - [ ] Chain: `.where(...)` → `.filter(query)` → `.join(...)` → `.orderByFromQuery(...)` → `.paginate(query)` → `.select()` or `.selectFields({...})`.
+- [ ] **No-Heavy-Joins Rule**: List/analytics endpoints must avoid excessive or deeply nested joins. Use flat structures or optimized subqueries where possible to ensure high performance.
 - [ ] Response includes `{ data, total, page, limit }` before being wrapped by controller.
 - [ ] `PaginatedFilterQueryDto` is the standard query parameter DTO for list endpoints.
 - [ ] When joining tables via `selectFields({...})`, always alias nested table columns (e.g., `role: getTableColumns(Schema.roles)`).
@@ -259,6 +267,9 @@ src/modules/<feature>/
 - ❌ **No `npm` or `yarn`** — only `pnpm` (guarded by `preinstall` hook).
 - ❌ **No editing existing migration files** — generate new ones.
 - ❌ **No system role modification** — `organizationId IS NULL` roles are immutable.
+- ❌ **No mutations without audit logs** — core entity changes must be traceable.
+- ❌ **No undocumented API response fields** — missing `@ApiProperty()` on DTOs.
+- ❌ **No "heavy-joins" in list endpoints** — violates performance standard for data analysts.
 - ❌ **No silent exception swallowing** — always log and rethrow or map to NestJS exception.
 
 ---

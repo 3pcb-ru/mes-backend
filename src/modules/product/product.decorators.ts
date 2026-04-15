@@ -1,12 +1,13 @@
 import { applyDecorators, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ZodResponse } from 'nestjs-zod';
 
 import { Permissions } from '@/common/permissions';
 import { RequiresPermissions } from '@/modules/auth/decorators/permission.decorator';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '@/modules/auth/guards/permission.guard';
 
-import { ProductDetailResponseDto, ProductListResponseDto } from './dto/product-response.dto';
+import { ProductDetailResponseDto, ProductListResponseDto } from './product.dto';
 
 export const ProductDecorators = {
     list: () =>
@@ -14,7 +15,7 @@ export const ProductDecorators = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.products.Read),
             ApiOperation({ summary: 'List all products' }),
-            ApiResponse({ status: 200, type: ProductListResponseDto, description: 'Products fetched successfully' }),
+            ZodResponse({ status: 200, type: ProductListResponseDto }),
         ),
 
     create: () =>
@@ -22,7 +23,7 @@ export const ProductDecorators = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.products.Write),
             ApiOperation({ summary: 'Create a new product' }),
-            ApiResponse({ status: 201, type: ProductDetailResponseDto, description: 'Product created successfully' }),
+            ZodResponse({ status: 201, type: ProductDetailResponseDto }),
             ApiResponse({ status: 400, description: 'Bad Request' }),
         ),
 
@@ -31,7 +32,7 @@ export const ProductDecorators = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.products.Read),
             ApiOperation({ summary: 'Get a product by ID' }),
-            ApiResponse({ status: 200, type: ProductDetailResponseDto, description: 'Product fetched successfully' }),
+            ZodResponse({ status: 200, type: ProductDetailResponseDto }),
             ApiResponse({ status: 404, description: 'Product not found' }),
         ),
 
@@ -40,7 +41,7 @@ export const ProductDecorators = {
             UseGuards(JwtAuthGuard, PermissionGuard),
             RequiresPermissions(Permissions.products.Update),
             ApiOperation({ summary: 'Update a product' }),
-            ApiResponse({ status: 200, type: ProductDetailResponseDto, description: 'Product updated successfully' }),
+            ZodResponse({ status: 200, type: ProductDetailResponseDto }),
             ApiResponse({ status: 404, description: 'Product not found' }),
         ),
 

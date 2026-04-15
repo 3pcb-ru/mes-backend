@@ -1,25 +1,36 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq, isNull } from 'drizzle-orm';
 
+import { CustomLoggerService } from '@/app/services/logger/logger.service';
+import { BaseFilterableService } from '@/common/services/base-filterable.service';
+import { FilterService } from '@/common/services/filter.service';
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 import { JwtUser } from '@/types/jwt.types';
 
+import { CreateWorkOrderDto, ListWorkOrdersQueryDto } from './work-order.dto';
 import { WorkOrderPolicy } from './work-order.policy';
 
 @Injectable()
-export class WorkOrderService {
-    private readonly policy = new WorkOrderPolicy();
-
-    constructor(private readonly drizzle: DrizzleService) {}
+export class WorkOrderService extends BaseFilterableService {
+    constructor(
+        private readonly drizzle: DrizzleService,
+        private readonly logger: CustomLoggerService,
+        private readonly policy: WorkOrderPolicy,
+        filterService: FilterService,
+    ) {
+        super(filterService);
+        this.logger.setContext(WorkOrderService.name);
+    }
 
     private get db() {
         return this.drizzle.database;
     }
 
-    async createWorkOrder(bomRevisionId: string, targetQuantity: number, user: JwtUser) {
+    async createWorkOrder(dto: CreateWorkOrderDto, user: JwtUser) {
         if (!user.organizationId) throw new BadRequestException('User organization required to create work order');
         const organizationId = user.organizationId;
+        const { bomRevisionId, targetQuantity } = dto;
 
         await this.policy.canWrite(user);
 
@@ -73,17 +84,18 @@ export class WorkOrderService {
         return { message: 'Work order released' };
     }
 
-    async listWorkOrders(user: JwtUser) {
+    async listWorkOrders(query: ListWorkOrdersQueryDto, user: JwtUser) {
         const policyWhere = await this.policy.read(user, isNull(Schema.workOrder.deletedAt));
-        return await this.db.query.workOrder.findMany({
-            where: policyWhere,
-            with: {
-                bomRevision: {
-                    with: {
-                        product: true,
-                    },
-                },
-            },
-        });
+
+        return await this.filterable(this.db, Schema.workOrder, {
+            defaultSortColumn: 'createdAt',
+        })
+            .where(policyWhere)
+            .filter(query)
+            .orderByFromQuery(query, 'createdAt')
+            .paginate(query)
+            .selectFields({
+                ...Schema.workOrder,
+            });
     }
 }

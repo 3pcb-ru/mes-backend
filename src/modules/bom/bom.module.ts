@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 
+import { CustomLoggerService } from '@/app/services/logger/logger.service';
+import { FilterService } from '@/common/services/filter.service';
 import { DrizzleModule } from '@/models/model.module';
 
 import { BomMaterialPolicy, BomPolicy } from './bom.policy';
@@ -10,7 +12,7 @@ import { RevisionController } from './revision.controller';
 @Module({
     imports: [DrizzleModule],
     controllers: [RevisionController, MaterialController],
-    providers: [BomService, BomPolicy, BomMaterialPolicy],
+    providers: [BomService, BomPolicy, BomMaterialPolicy, FilterService, CustomLoggerService],
     exports: [BomService, BomPolicy, BomMaterialPolicy],
 })
 export class BomModule {}

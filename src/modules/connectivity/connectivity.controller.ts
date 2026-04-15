@@ -1,12 +1,11 @@
 import { Body, Controller, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { ok } from '@/utils';
 
-import { ConnectivityService } from './connectivity.service';
-import { NodeEventDto } from './dto/node-event.dto';
-
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ConnectivityDecorators } from './connectivity.decorators';
+import { NodeEventDto } from './connectivity.dto';
+import { ConnectivityService } from './connectivity.service';
 
 @ApiTags('Connectivity')
 @ApiBearerAuth()

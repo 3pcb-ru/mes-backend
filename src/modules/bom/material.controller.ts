@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '@/common/decorators/user.decorator';
@@ -6,9 +6,8 @@ import { JwtUser } from '@/types/jwt.types';
 import { ok } from '@/utils';
 
 import { BomDecorators } from './bom.decorators';
+import { CreateMaterialDto, ListBomQueryDto, UpdateMaterialDto } from './bom.dto';
 import { BomService } from './bom.service';
-import { CreateMaterialDto } from './dto/create-material.dto';
-import { UpdateMaterialDto } from './dto/update-material.dto';
 
 @ApiTags('BOM')
 @ApiBearerAuth()
@@ -18,8 +17,9 @@ export class MaterialController {
 
     @Get()
     @BomDecorators.getMaterials()
-    async getMaterials(@Param('revisionId') revisionId: string, @CurrentUser() user: JwtUser) {
-        return ok(await this.bomService.getMaterials(revisionId, user)).message('Materials retrieved successfully');
+    async getMaterials(@Param('revisionId') revisionId: string, @Query() query: ListBomQueryDto, @CurrentUser() user: JwtUser) {
+        const result = await this.bomService.getMaterials(revisionId, query, user);
+        return ok(result.data).message('Materials retrieved successfully').paginate(result);
     }
 
     @Post()

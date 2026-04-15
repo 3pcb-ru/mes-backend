@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '@/common/decorators/user.decorator';
@@ -6,6 +6,7 @@ import { JwtUser } from '@/types/jwt.types';
 import { ok } from '@/utils';
 
 import { WorkOrderDecorators } from './work-order.decorators';
+import { CreateWorkOrderDto, ListWorkOrdersQueryDto } from './work-order.dto';
 import { WorkOrderService } from './work-order.service';
 
 @ApiTags('Work Orders')
@@ -16,8 +17,8 @@ export class WorkOrderController {
 
     @Post()
     @WorkOrderDecorators.createWorkOrder()
-    async createWorkOrder(@CurrentUser() user: JwtUser, @Body() body: { bomRevisionId: string; targetQuantity: number }) {
-        return ok(await this.workOrderService.createWorkOrder(body.bomRevisionId, body.targetQuantity, user)).message('Work order created successfully');
+    async createWorkOrder(@CurrentUser() user: JwtUser, @Body() body: CreateWorkOrderDto) {
+        return ok(await this.workOrderService.createWorkOrder(body, user)).message('Work order created successfully');
     }
 
     @Post('release/:id')
@@ -28,7 +29,8 @@ export class WorkOrderController {
 
     @Get()
     @WorkOrderDecorators.listWorkOrders()
-    async listWorkOrders(@CurrentUser() user: JwtUser) {
-        return ok(await this.workOrderService.listWorkOrders(user)).message('Work orders retrieved successfully');
+    async listWorkOrders(@Query() query: ListWorkOrdersQueryDto, @CurrentUser() user: JwtUser) {
+        const result = await this.workOrderService.listWorkOrders(query, user);
+        return ok(result.data).message('Work orders retrieved successfully').paginate(result);
     }
 }

@@ -1,14 +1,13 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '@/common/decorators/user.decorator';
 import { JwtUser } from '@/types/jwt.types';
 import { ok } from '@/utils';
 
-import { CreateActivityDto } from './dto/create-activity.dto';
-import { TraceabilityService } from './traceability.service';
-
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { TraceabilityDecorators } from './traceability.decorators';
+import { CreateActivityDto, ListTraceabilityQueryDto } from './traceability.dto';
+import { TraceabilityService } from './traceability.service';
 
 @ApiTags('Traceability')
 @ApiBearerAuth()
@@ -18,9 +17,9 @@ export class TraceabilityController {
 
     @Get('activities')
     @TraceabilityDecorators.list()
-    async list(@CurrentUser() user: JwtUser) {
-        const result = await this.svc.list(user);
-        return ok(result).message('Activity logs retrieved successfully');
+    async list(@Query() query: ListTraceabilityQueryDto, @CurrentUser() user: JwtUser) {
+        const result = await this.svc.list(query, user);
+        return ok(result.data).message('Activity logs retrieved successfully').paginate(result);
     }
 
     @Get('activities/:id')

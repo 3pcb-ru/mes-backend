@@ -1,15 +1,13 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '@/common/decorators/user.decorator';
 import { JwtUser } from '@/types/jwt.types';
 import { ok } from '@/utils';
 
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { ProductService } from './product.service';
-
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ProductDecorators } from './product.decorators';
+import { CreateProductDto, ListProductsQueryDto, UpdateProductDto } from './product.dto';
+import { ProductService } from './product.service';
 
 @ApiTags('Products')
 @ApiBearerAuth()
@@ -19,9 +17,9 @@ export class ProductController {
 
     @Get()
     @ProductDecorators.list()
-    async list(@CurrentUser() user: JwtUser) {
-        const result = await this.svc.list(user);
-        return ok(result).message('Products retrieved successfully');
+    async list(@Query() query: ListProductsQueryDto, @CurrentUser() user: JwtUser) {
+        const result = await this.svc.list(query, user);
+        return ok(result.data).message('Products retrieved successfully').paginate(result);
     }
 
     @Post()
