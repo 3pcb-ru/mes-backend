@@ -15,3 +15,6 @@ export const VERIFICATION_MAX_ATTEMPT_LIMIT_EXPIRY = 60 * 60; // 1 hour in secon
 
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_LIMIT = 10;
+
+// Background Jobs
+export const ACTIVITY_LOG_RETENTION_DAYS = 365;

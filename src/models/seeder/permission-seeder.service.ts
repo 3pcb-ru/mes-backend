@@ -1,13 +1,15 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { DrizzleService } from '../model.service';
-import { CustomLoggerService } from '@/app/services/logger/logger.service';
-import { flattenPermissions } from '@/utils';
-import { permissions as permissionSchema } from '@/models/schema/permissions.schema';
-import { roles as roleSchema, rolePermissions as rolePermissionsSchema } from '@/models/schema/roles.schema';
 import { eq, inArray } from 'drizzle-orm';
-import { Permission } from '@/types';
+
+import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { PermissionDescriptions, Permissions } from '@/common/permissions';
+import { permissions as permissionSchema } from '@/models/schema/permissions.schema';
+import { rolePermissions as rolePermissionsSchema, roles as roleSchema } from '@/models/schema/roles.schema';
 import { RolesService } from '@/modules/roles/roles.service';
+import { Permission } from '@/types';
+import { flattenPermissions } from '@/utils';
+
+import { DrizzleService } from '../model.service';
 
 @Injectable()
 export class PermissionSeederService implements OnModuleInit {
@@ -110,6 +112,7 @@ export class PermissionSeederService implements OnModuleInit {
                 Permissions.notifications.ReadAll,
                 Permissions.notifications.Update,
                 Permissions.notifications.Delete,
+                Permissions.traceability.ReadAudit,
             ],
         },
         Storekeeper: {

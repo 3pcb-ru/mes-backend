@@ -8,7 +8,7 @@ import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 import { JwtUser } from '@/types/jwt.types';
 
-import { CreateActivityDto, ListTraceabilityQueryDto } from './traceability.dto';
+import { CreateActivityDto, ListTraceabilityQueryDto, RecordChangeDto } from './traceability.dto';
 import { TraceabilityPolicy } from './traceability.policy';
 
 @Injectable()
@@ -58,6 +58,47 @@ export class TraceabilityService extends BaseFilterableService {
                 ...payload,
                 organizationId: user.organizationId!,
                 userId: user.id,
+            })
+            .returning();
+        return entry;
+    }
+
+    async listAuditLogs(query: ListTraceabilityQueryDto, user: JwtUser) {
+        // Using the same policy as activity logs for now, as it's scoped by organizationId
+        const policyWhere = await this.policy.read(user);
+
+        return await this.filterable(this.db, Schema.logTraceability, {
+            defaultSortColumn: 'createdAt',
+            defaultSortOrder: 'desc',
+        })
+            .where(policyWhere)
+            .filter(query)
+            .orderByFromQuery(query, 'createdAt')
+            .paginate(query)
+            .selectFields({
+                ...Schema.logTraceability,
+            });
+    }
+
+    /**
+     * Records a change in the database.
+     * @param payload The change to record.
+     * @param user The user performing the change.
+     * @param tx The transaction to use. type: PgTransaction
+     * @returns The recorded change.
+     */
+    async recordChange(payload: RecordChangeDto, user: JwtUser, tx?: any) {
+        const db = tx || this.db;
+        const [entry] = await db
+            .insert(Schema.logTraceability)
+            .values({
+                organizationId: user.organizationId!,
+                userId: user.id,
+                entityType: payload.entityType,
+                entityId: payload.entityId,
+                action: payload.action,
+                oldData: payload.oldData,
+                newData: payload.newData,
             })
             .returning();
         return entry;

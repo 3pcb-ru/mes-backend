@@ -28,7 +28,7 @@ export class ProductController {
         if (!user.organizationId) {
             throw new ForbiddenException('User does not belong to any organization');
         }
-        const result = await this.svc.create(body, user.organizationId);
+        const result = await this.svc.create(body, user);
         return ok(result).message('Product created successfully');
     }
 

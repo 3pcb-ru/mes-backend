@@ -16,3 +16,15 @@ export const activityLogs = pgTable('activity_logs', {
     actionType: text('action_type'),
     metadata: jsonb('metadata'),
 });
+
+export const logTraceability = pgTable('log_traceability', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    organizationId: uuid('factory_id').references(() => organization.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id').references(() => user.id),
+    entityType: text('entity_type').notNull(),
+    entityId: uuid('entity_id').notNull(),
+    action: text('action').notNull(),
+    oldData: jsonb('old_data'),
+    newData: jsonb('new_data'),
+    timestamp: timestamp('created_at').defaultNow(),
+});

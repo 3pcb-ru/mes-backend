@@ -17,6 +17,7 @@ import { BomModule } from '@/modules/bom/bom.module';
 import { ConnectivityModule } from '@/modules/connectivity/connectivity.module';
 import { ExecutionModule } from '@/modules/execution/execution.module';
 import { NodeModule } from '@/modules/node/node.module';
+import { JobsModule } from '@/modules/jobs/jobs.module';
 import { NotificationModule } from '@/modules/notifications/notification.module';
 import { OrganizationModule } from '@/modules/organization/organization.module';
 import { ProductModule } from '@/modules/product/product.module';
@@ -62,6 +63,7 @@ import { RedisModule } from './services/redis/redis.module';
         ProductModule,
         ExecutionModule,
         TraceabilityModule,
+        JobsModule,
         ConnectivityModule,
         HealthModule,
     ],

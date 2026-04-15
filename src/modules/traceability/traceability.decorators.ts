@@ -7,7 +7,7 @@ import { RequiresPermissions } from '@/modules/auth/decorators/permission.decora
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '@/modules/auth/guards/permission.guard';
 
-import { ActivityDetailResponseDto, ActivityListResponseDto } from './traceability.dto';
+import { ActivityDetailResponseDto, ActivityListResponseDto, AuditLogListResponseDto } from './traceability.dto';
 
 export const TraceabilityDecorators = {
     list: () =>
@@ -34,5 +34,13 @@ export const TraceabilityDecorators = {
             ApiOperation({ summary: 'Create a new activity' }),
             ZodResponse({ status: 201, type: ActivityDetailResponseDto }),
             ApiResponse({ status: 400, description: 'Bad Request' }),
+        ),
+
+    listAuditLogs: () =>
+        applyDecorators(
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.traceability.ReadAudit),
+            ApiOperation({ summary: 'List all entity audit logs' }),
+            ZodResponse({ status: 200, type: AuditLogListResponseDto }),
         ),
 };

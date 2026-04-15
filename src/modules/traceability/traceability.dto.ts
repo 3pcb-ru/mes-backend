@@ -19,6 +19,18 @@ export const traceabilityActivitySchema = z.object({
     createdAt: isoDateTime,
 });
 
+export const auditLogSchema = z.object({
+    id: z.uuidv4(),
+    organizationId: z.uuidv4(),
+    userId: z.uuidv4().nullable(),
+    entityType: z.string().min(1),
+    entityId: z.uuidv4(),
+    action: z.enum(['INSERT', 'UPDATE', 'DELETE']),
+    oldData: z.record(z.string(), z.any()).nullable(),
+    newData: z.record(z.string(), z.any()).nullable(),
+    createdAt: isoDateTime,
+});
+
 // --- DTOs ---
 
 export class CreateActivityDto extends createStrictZodDto(
@@ -31,6 +43,14 @@ export class CreateActivityDto extends createStrictZodDto(
     }),
 ) {}
 
+export class RecordChangeDto {
+    entityType: string;
+    entityId: string;
+    action: 'INSERT' | 'UPDATE' | 'DELETE';
+    oldData?: Record<string, any>;
+    newData?: Record<string, any>;
+}
+
 export class ListTraceabilityQueryDto extends PaginatedFilterQueryDto {}
 
 // --- RESPONSES ---
@@ -38,3 +58,6 @@ export class ListTraceabilityQueryDto extends PaginatedFilterQueryDto {}
 export class ActivityResponseDto extends createStrictZodDto(traceabilityActivitySchema) {}
 export class ActivityListResponseDto extends createStrictZodDto(createApiPaginatedResponseSchema(traceabilityActivitySchema)) {}
 export class ActivityDetailResponseDto extends createStrictZodDto(createApiResponseSchema(traceabilityActivitySchema)) {}
+
+export class AuditLogResponseDto extends createStrictZodDto(auditLogSchema) {}
+export class AuditLogListResponseDto extends createStrictZodDto(createApiPaginatedResponseSchema(auditLogSchema)) {}

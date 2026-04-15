@@ -22,6 +22,13 @@ export class TraceabilityController {
         return ok(result.data).message('Activity logs retrieved successfully').paginate(result);
     }
 
+    @Get('audit-logs')
+    @TraceabilityDecorators.listAuditLogs()
+    async listAuditLogs(@Query() query: ListTraceabilityQueryDto, @CurrentUser() user: JwtUser) {
+        const result = await this.svc.listAuditLogs(query, user);
+        return ok(result.data).message('Audit logs retrieved successfully').paginate(result);
+    }
+
     @Get('activities/:id')
     @TraceabilityDecorators.getById()
     async getById(@CurrentUser() user: JwtUser, @Param('id') id: string) {

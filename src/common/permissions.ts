@@ -118,6 +118,7 @@ export const Permissions = {
         Read: 'traceability.read',
         ReadAll: 'traceability.read.all',
         Write: 'traceability.write',
+        ReadAudit: 'traceability.audit.read',
     },
     execution: {
         Read: 'execution.read',
@@ -250,6 +251,7 @@ export const PermissionDescriptions: Record<string, string> = {
     'traceability.read': 'Read own traceability data',
     'traceability.read.all': 'Read all traceability data in the system',
     'traceability.write': 'Create traceability records',
+    'traceability.audit.read': 'Read entity audit logs (who changed what)',
 
     // --- Execution ---
     'execution.read': 'Read execution data',

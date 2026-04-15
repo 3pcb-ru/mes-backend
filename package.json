@@ -1,7 +1,7 @@
 {
     "name": "mes-backend",
     "description": "NestJS backend application for online MES platform for manufacturing enterprises to manage and optimize their production processes.",
-    "version": "6.1.0",
+    "version": "6.2.0",
     "private": true,
     "scripts": {
         "preinstall": "npx only-allow pnpm",
@@ -40,7 +40,8 @@
         "prepare": "husky || true"
     },
     "dependencies": {
-        "@nestjs/axios": "^4.0.1",
+        "@nestjs/axios": "4.0.1",
+        "@nestjs/bullmq": "11.0.4",
         "@nestjs/common": "11.1.14",
         "@nestjs/config": "4.0.3",
         "@nestjs/core": "11.1.14",
@@ -51,8 +52,9 @@
         "@nestjs/schedule": "6.1.1",
         "@nestjs/serve-static": "5.0.4",
         "@nestjs/swagger": "11.2.6",
-        "@nestjs/terminus": "^11.1.1",
+        "@nestjs/terminus": "11.1.1",
         "bcrypt": "6.0.0",
+        "bullmq": "5.74.1",
         "dotenv": "17.3.1",
         "drizzle-orm": "0.45.1",
         "drizzle-zod": "0.8.3",
@@ -76,12 +78,12 @@
         "zod": "4.3.6"
     },
     "devDependencies": {
-        "@commitlint/cli": "^20.4.2",
-        "@commitlint/config-conventional": "^20.4.2",
+        "@commitlint/cli": "20.4.2",
+        "@commitlint/config-conventional": "20.4.2",
         "@darraghor/eslint-plugin-nestjs-typed": "7.1.22",
         "@electric-sql/pglite": "0.3.15",
         "@eslint/js": "10.0.1",
-        "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
+        "@ianvs/prettier-plugin-sort-imports": "4.7.1",
         "@nestjs/cli": "11.0.16",
         "@nestjs/schematics": "11.0.9",
         "@nestjs/testing": "11.1.14",
@@ -91,7 +93,7 @@
         "@types/bcrypt": "6.0.0",
         "@types/express": "5.0.6",
         "@types/jest": "30.0.0",
-        "@types/ms": "^2.1.0",
+        "@types/ms": "2.1.0",
         "@types/node": "25.3.0",
         "@types/nodemailer": "7.0.11",
         "@types/passport-jwt": "4.0.1",
@@ -106,7 +108,7 @@
         "eslint-plugin-prettier": "5.5.5",
         "eslint-plugin-unused-imports": "4.4.1",
         "globals": "17.3.0",
-        "husky": "^9.1.7",
+        "husky": "9.1.7",
         "jest": "30.2.0",
         "prettier": "3.8.1",
         "supertest": "7.2.2",

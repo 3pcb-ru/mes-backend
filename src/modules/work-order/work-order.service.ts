@@ -8,6 +8,7 @@ import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 import { JwtUser } from '@/types/jwt.types';
 
+import { TraceabilityService } from '../traceability/traceability.service';
 import { CreateWorkOrderDto, ListWorkOrdersQueryDto } from './work-order.dto';
 import { WorkOrderPolicy } from './work-order.policy';
 
@@ -17,6 +18,7 @@ export class WorkOrderService extends BaseFilterableService {
         private readonly drizzle: DrizzleService,
         private readonly logger: CustomLoggerService,
         private readonly policy: WorkOrderPolicy,
+        private readonly traceability: TraceabilityService,
         filterService: FilterService,
     ) {
         super(filterService);
@@ -64,6 +66,16 @@ export class WorkOrderService extends BaseFilterableService {
             })
             .returning();
 
+        await this.traceability.recordChange(
+            {
+                entityType: 'work_order',
+                entityId: workOrder.id,
+                action: 'INSERT',
+                newData: workOrder,
+            },
+            user,
+        );
+
         return workOrder;
     }
 
@@ -79,7 +91,18 @@ export class WorkOrderService extends BaseFilterableService {
             throw new BadRequestException('Work order is not in draft status');
         }
 
-        await this.db.update(Schema.workOrder).set({ status: 'released', updatedAt: new Date() }).where(policyWhere);
+        const [updated] = await this.db.update(Schema.workOrder).set({ status: 'released', updatedAt: new Date() }).where(policyWhere).returning();
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'work_order',
+                entityId: wo.id,
+                action: 'UPDATE',
+                oldData: wo,
+                newData: updated,
+            },
+            user,
+        );
 
         return { message: 'Work order released' };
     }

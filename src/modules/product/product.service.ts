@@ -9,6 +9,7 @@ import { bomRevision } from '@/models/schema/bom.schema';
 import { product } from '@/models/schema/product.schema';
 import { JwtUser } from '@/types/jwt.types';
 
+import { TraceabilityService } from '../traceability/traceability.service';
 import { CreateProductDto, ListProductsQueryDto, UpdateProductDto } from './product.dto';
 import { ProductPolicy } from './product.policy';
 
@@ -18,6 +19,7 @@ export class ProductService extends BaseFilterableService {
         private readonly drizzleService: DrizzleService,
         private readonly logger: CustomLoggerService,
         private readonly policy: ProductPolicy,
+        private readonly traceability: TraceabilityService,
         filterService: FilterService,
     ) {
         super(filterService);
@@ -40,7 +42,8 @@ export class ProductService extends BaseFilterableService {
             .select();
     }
 
-    async create(payload: CreateProductDto, organizationId: string) {
+    async create(payload: CreateProductDto, user: JwtUser) {
+        const organizationId = user.organizationId!;
         const [p] = await this.db
             .insert(product)
             .values({
@@ -49,6 +52,17 @@ export class ProductService extends BaseFilterableService {
                 organizationId,
             })
             .returning();
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'product',
+                entityId: p.id,
+                action: 'INSERT',
+                newData: p,
+            },
+            user,
+        );
+
         return p;
     }
 
@@ -66,12 +80,26 @@ export class ProductService extends BaseFilterableService {
 
     async update(id: string, payload: UpdateProductDto, user: JwtUser) {
         const policyWhere = await this.policy.update(user, eq(product.id, id), isNull(product.deletedAt));
+        const existing = await this.findOne(id, user);
+
         const [p] = await this.db
             .update(product)
             .set({ ...payload, updatedAt: new Date() })
             .where(policyWhere)
             .returning();
         if (!p) throw new NotFoundException('Product not found');
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'product',
+                entityId: p.id,
+                action: 'UPDATE',
+                oldData: existing,
+                newData: p,
+            },
+            user,
+        );
+
         return p;
     }
 
@@ -96,6 +124,18 @@ export class ProductService extends BaseFilterableService {
         const deleteWhere = await this.policy.delete(user, eq(product.id, id), isNull(product.deletedAt));
         const [p] = await this.db.update(product).set({ deletedAt: new Date(), updatedAt: new Date() }).where(deleteWhere).returning();
         if (!p) throw new NotFoundException('Product not found');
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'product',
+                entityId: p.id,
+                action: 'DELETE',
+                oldData: existingProduct,
+                newData: p,
+            },
+            user,
+        );
+
         return p;
     }
 }

@@ -7,11 +7,12 @@ import { BaseFilterableService } from '@/common/services/base-filterable.service
 import { FilterService } from '@/common/services/filter.service';
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
+import { JwtUser } from '@/types/jwt.types';
 
+import { TraceabilityService } from '../traceability/traceability.service';
 import { CreateNodeDto } from './dto/create-node.dto';
 import { ListNodesDto } from './dto/list-nodes.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
-import { JwtUser } from '@/types/jwt.types';
 import { NodePolicy } from './node.policy';
 
 @Injectable()
@@ -21,6 +22,7 @@ export class NodeService extends BaseFilterableService {
     constructor(
         private readonly drizzle: DrizzleService,
         private readonly logger: CustomLoggerService,
+        private readonly traceability: TraceabilityService,
         filterService: FilterService,
     ) {
         super(filterService);
@@ -33,7 +35,7 @@ export class NodeService extends BaseFilterableService {
 
     async list(query: ListNodesDto, user: JwtUser) {
         this.logger.log(`[NodeService.list] User: ${user.id}`, query);
-        
+
         const policyWhere = await this.policy.read(user, isNull(Schema.nodes.deletedAt));
 
         let qb = this.filterable(this.db, Schema.nodes, {
@@ -84,23 +86,31 @@ export class NodeService extends BaseFilterableService {
             })
             .returning();
 
+        await this.traceability.recordChange(
+            {
+                entityType: 'node',
+                entityId: node.id,
+                action: 'INSERT',
+                newData: node,
+            },
+            user,
+        );
+
         return node;
     }
 
     async findOne(id: string, user?: JwtUser) {
         const _where = user ? await this.policy.read(user, eq(Schema.nodes.id, id), isNull(Schema.nodes.deletedAt)) : and(eq(Schema.nodes.id, id), isNull(Schema.nodes.deletedAt));
-        
-        const [node] = await this.db
-            .select()
-            .from(Schema.nodes)
-            .where(_where!)
-            .limit(1);
+
+        const [node] = await this.db.select().from(Schema.nodes).where(_where!).limit(1);
         if (!node) throw new NotFoundException('Node not found');
         return node;
     }
 
     async update(id: string, payload: UpdateNodeDto, user: JwtUser) {
         const policyWhere = await this.policy.update(user, eq(Schema.nodes.id, id), isNull(Schema.nodes.deletedAt));
+        const existing = await this.findOne(id, user);
+
         const [updated] = await this.db
             .update(Schema.nodes)
             .set({
@@ -111,17 +121,25 @@ export class NodeService extends BaseFilterableService {
             .returning();
 
         if (!updated) throw new NotFoundException('Node not found');
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'node',
+                entityId: updated.id,
+                action: 'UPDATE',
+                oldData: existing,
+                newData: updated,
+            },
+            user,
+        );
+
         return updated;
     }
 
     async changeStatus(id: string, status: string, reason: string, user: JwtUser) {
         return await this.db.transaction(async (tx) => {
             const policyWhere = await this.policy.update(user, eq(Schema.nodes.id, id), isNull(Schema.nodes.deletedAt));
-            const [node] = await tx
-                .select()
-                .from(Schema.nodes)
-                .where(policyWhere)
-                .limit(1);
+            const [node] = await tx.select().from(Schema.nodes).where(policyWhere).limit(1);
             if (!node) {
                 throw new NotFoundException('Node not found');
             }
@@ -151,6 +169,19 @@ export class NodeService extends BaseFilterableService {
                 },
             });
 
+            // 3. Log to log_traceability as well for consistent row-level audit
+            await this.traceability.recordChange(
+                {
+                    entityType: 'node',
+                    entityId: id,
+                    action: 'UPDATE', // Status change is an update to node row
+                    oldData: node,
+                    newData: updated,
+                },
+                user,
+                tx,
+            );
+
             return updated;
         });
     }
@@ -163,11 +194,7 @@ export class NodeService extends BaseFilterableService {
             let newPath = `root_${segment}`;
             if (newParentId) {
                 const parentReadWhere = await this.policy.read(user, eq(Schema.nodes.id, newParentId), isNull(Schema.nodes.deletedAt));
-                const parent = await tx
-                    .select()
-                    .from(Schema.nodes)
-                    .where(parentReadWhere)
-                    .limit(1);
+                const parent = await tx.select().from(Schema.nodes).where(parentReadWhere).limit(1);
                 if (!parent[0]) throw new NotFoundException('Parent node not found');
                 newPath = `${parent[0].path}.${segment}`;
             }
@@ -183,6 +210,18 @@ export class NodeService extends BaseFilterableService {
                 })
                 .where(policyWhere)
                 .returning();
+
+            await this.traceability.recordChange(
+                {
+                    entityType: 'node',
+                    entityId: updated.id,
+                    action: 'UPDATE',
+                    oldData: node,
+                    newData: updated,
+                },
+                user,
+                tx,
+            );
 
             // Update all descendants' paths using ltree functions
             await tx.execute(sql`
@@ -223,16 +262,42 @@ export class NodeService extends BaseFilterableService {
             if (logs.length === 0 && node.status === 'IDLE') {
                 // Hard Delete
                 await tx.delete(Schema.nodes).where(policyWhere);
+
+                await this.traceability.recordChange(
+                    {
+                        entityType: 'node',
+                        entityId: node.id,
+                        action: 'DELETE',
+                        oldData: node,
+                    },
+                    user,
+                    tx,
+                );
+
                 return { message: 'Node hard-deleted successfully', type: 'hard' };
             } else {
                 // Soft Delete
-                await tx
+                const [updated] = await tx
                     .update(Schema.nodes)
                     .set({
                         deletedAt: new Date(),
                         updatedAt: new Date(),
                     })
-                    .where(policyWhere);
+                    .where(policyWhere)
+                    .returning();
+
+                await this.traceability.recordChange(
+                    {
+                        entityType: 'node',
+                        entityId: node.id,
+                        action: 'DELETE',
+                        oldData: node,
+                        newData: updated,
+                    },
+                    user,
+                    tx,
+                );
+
                 return { message: 'Node archived successfully', type: 'soft' };
             }
         });

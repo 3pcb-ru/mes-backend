@@ -8,6 +8,7 @@ import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 import { JwtUser } from '@/types/jwt.types';
 
+import { TraceabilityService } from '../traceability/traceability.service';
 import { CreateMaterialDto, CreateRevisionDto, ListBomQueryDto, UpdateMaterialDto } from './bom.dto';
 import { BomMaterialPolicy, BomPolicy } from './bom.policy';
 
@@ -18,6 +19,7 @@ export class BomService extends BaseFilterableService {
         private readonly logger: CustomLoggerService,
         private readonly policy: BomPolicy,
         private readonly materialPolicy: BomMaterialPolicy,
+        private readonly traceability: TraceabilityService,
         filterService: FilterService,
     ) {
         super(filterService);
@@ -89,6 +91,16 @@ export class BomService extends BaseFilterableService {
             })
             .returning();
 
+        await this.traceability.recordChange(
+            {
+                entityType: 'bom_revision',
+                entityId: newRevision.id,
+                action: 'INSERT',
+                newData: newRevision,
+            },
+            user,
+        );
+
         return newRevision;
     }
 
@@ -127,23 +139,47 @@ export class BomService extends BaseFilterableService {
                 })
                 .returning();
 
+            await this.traceability.recordChange(
+                {
+                    entityType: 'bom_revision',
+                    entityId: newRevision.id,
+                    action: 'INSERT',
+                    newData: newRevision,
+                },
+                user,
+                tx,
+            );
+
             // Copy materials from base revision
             const baseMaterials = await tx.query.bomMaterial.findMany({
                 where: and(eq(Schema.bomMaterial.bomRevisionId, baseRevisionId), isNull(Schema.bomMaterial.deletedAt)),
             });
 
             if (baseMaterials.length > 0) {
-                await tx.insert(Schema.bomMaterial).values(
-                    baseMaterials.map((m) => ({
-                        bomRevisionId: newRevision.id,
-                        organizationId: m.organizationId,
-                        itemId: m.itemId,
-                        designators: m.designators,
-                        alternatives: m.alternatives,
-                        quantity: m.quantity,
-                        unit: m.unit,
-                    })),
-                );
+                const materialsData = baseMaterials.map((m) => ({
+                    bomRevisionId: newRevision.id,
+                    organizationId: m.organizationId,
+                    itemId: m.itemId,
+                    designators: m.designators,
+                    alternatives: m.alternatives,
+                    quantity: m.quantity,
+                    unit: m.unit,
+                }));
+
+                const insertedMaterials = await tx.insert(Schema.bomMaterial).values(materialsData).returning();
+
+                for (const m of insertedMaterials) {
+                    await this.traceability.recordChange(
+                        {
+                            entityType: 'bom_material',
+                            entityId: m.id,
+                            action: 'INSERT',
+                            newData: m,
+                        },
+                        user,
+                        tx,
+                    );
+                }
             }
 
             return newRevision;
@@ -152,8 +188,21 @@ export class BomService extends BaseFilterableService {
 
     async updateRevision(productId: string, revisionId: string, version: string, user: JwtUser) {
         await this.ensureDraft(revisionId, user);
+        const existing = await this.db.query.bomRevision.findFirst({ where: eq(Schema.bomRevision.id, revisionId) });
         const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
         const [updated] = await this.db.update(Schema.bomRevision).set({ version, updatedAt: new Date() }).where(policyWhere).returning();
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'bom_revision',
+                entityId: updated.id,
+                action: 'UPDATE',
+                oldData: existing,
+                newData: updated,
+            },
+            user,
+        );
+
         return updated;
     }
 
@@ -168,14 +217,26 @@ export class BomService extends BaseFilterableService {
             throw new BadRequestException('Cannot delete active or approved revision');
         }
 
-        await this.db.update(Schema.bomRevision).set({ deletedAt: new Date(), updatedAt: new Date() }).where(policyWhere);
+        const [updated] = await this.db.update(Schema.bomRevision).set({ deletedAt: new Date(), updatedAt: new Date() }).where(policyWhere).returning();
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'bom_revision',
+                entityId: rev.id,
+                action: 'DELETE',
+                oldData: rev,
+                newData: updated,
+            },
+            user,
+        );
+
         return { message: 'Revision deleted' };
     }
 
     async submitRevision(revisionId: string, user: JwtUser) {
-        await this.ensureDraft(revisionId, user);
+        const existing = await this.ensureDraft(revisionId, user);
         const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
-        await this.db
+        const [updated] = await this.db
             .update(Schema.bomRevision)
             .set({
                 status: 'submitted',
@@ -183,7 +244,20 @@ export class BomService extends BaseFilterableService {
                 submitDate: new Date(),
                 updatedAt: new Date(),
             })
-            .where(policyWhere);
+            .where(policyWhere)
+            .returning();
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'bom_revision',
+                entityId: updated.id,
+                action: 'UPDATE',
+                oldData: existing,
+                newData: updated,
+            },
+            user,
+        );
+
         return { message: 'Revision submitted' };
     }
 
@@ -198,7 +272,7 @@ export class BomService extends BaseFilterableService {
             throw new BadRequestException('Only submitted revisions can be approved');
         }
 
-        await this.db
+        const [updated] = await this.db
             .update(Schema.bomRevision)
             .set({
                 status: 'approved',
@@ -206,7 +280,20 @@ export class BomService extends BaseFilterableService {
                 approveDate: new Date(),
                 updatedAt: new Date(),
             })
-            .where(policyWhere);
+            .where(policyWhere)
+            .returning();
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'bom_revision',
+                entityId: updated.id,
+                action: 'UPDATE',
+                oldData: rev,
+                newData: updated,
+            },
+            user,
+        );
+
         return { message: 'Revision approved' };
     }
 
@@ -221,7 +308,19 @@ export class BomService extends BaseFilterableService {
             throw new BadRequestException('Only approved revisions can be activated');
         }
 
-        await this.db.update(Schema.bomRevision).set({ status: 'active', updatedAt: new Date() }).where(policyWhere);
+        const [updated] = await this.db.update(Schema.bomRevision).set({ status: 'active', updatedAt: new Date() }).where(policyWhere).returning();
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'bom_revision',
+                entityId: updated.id,
+                action: 'UPDATE',
+                oldData: rev,
+                newData: updated,
+            },
+            user,
+        );
+
         return { message: 'Revision activated' };
     }
 
@@ -255,6 +354,17 @@ export class BomService extends BaseFilterableService {
                 quantity: dto.quantity.toString(),
             })
             .returning();
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'bom_material',
+                entityId: m.id,
+                action: 'INSERT',
+                newData: m,
+            },
+            user,
+        );
+
         return m;
     }
 
@@ -266,6 +376,9 @@ export class BomService extends BaseFilterableService {
             eq(Schema.bomMaterial.bomRevisionId, revisionId),
             isNull(Schema.bomMaterial.deletedAt),
         );
+
+        const existing = await this.db.query.bomMaterial.findFirst({ where: eq(Schema.bomMaterial.id, materialId) });
+
         const [m] = await this.db
             .update(Schema.bomMaterial)
             .set({
@@ -277,6 +390,18 @@ export class BomService extends BaseFilterableService {
             .returning();
 
         if (!m) throw new NotFoundException('Material not found for this revision');
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'bom_material',
+                entityId: m.id,
+                action: 'UPDATE',
+                oldData: existing,
+                newData: m,
+            },
+            user,
+        );
+
         return m;
     }
 
@@ -288,9 +413,24 @@ export class BomService extends BaseFilterableService {
             eq(Schema.bomMaterial.bomRevisionId, revisionId),
             isNull(Schema.bomMaterial.deletedAt),
         );
+
+        const existing = await this.db.query.bomMaterial.findFirst({ where: eq(Schema.bomMaterial.id, materialId) });
+
         const [m] = await this.db.update(Schema.bomMaterial).set({ deletedAt: new Date(), updatedAt: new Date() }).where(policyWhere).returning();
 
         if (!m) throw new NotFoundException('Material not found for this revision');
+
+        await this.traceability.recordChange(
+            {
+                entityType: 'bom_material',
+                entityId: m.id,
+                action: 'DELETE',
+                oldData: existing,
+                newData: m,
+            },
+            user,
+        );
+
         return { message: 'Material removed' };
     }
 
