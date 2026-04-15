@@ -325,9 +325,7 @@ export class AuthService {
 
             await this.redisService.set(resetTokenKey, resetToken, RESET_TOKEN_EXPIRY);
 
-            const clientProtocol = process.env.CLIENT_PROTOCOL as string;
-            const clientHost = process.env.CLIENT_HOST as string;
-            const clientUrl = `${clientProtocol}://${clientHost}`;
+            const clientUrl = this.configService.get<string>('server.client.url');
 
             const resetUrl = `${clientUrl}/reset-password?email=${email}&code=${resetToken}`;
 
