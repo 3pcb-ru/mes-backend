@@ -82,7 +82,7 @@ export class TicketService extends BaseFilterableService {
                 .values({ userId: userId, consent: subscriptionConsent })
                 .onConflictDoUpdate({
                     target: Schema.userSettings.userId,
-                    set: { consent: subscriptionConsent, updatedAt: new Date() },
+                    set: { consent: subscriptionConsent, updatedAt: new Date().toISOString() },
                 });
         }
         const message = {
@@ -99,7 +99,7 @@ export class TicketService extends BaseFilterableService {
                     .values({ ...message, ticketId: ticket.id, senderType: SENDER_TYPE.USER })
                     .returning();
 
-                await tx.update(Schema.tickets).set({ updatedAt: new Date(), lastMessageAt: new Date() }).where(eq(Schema.tickets.id, ticket.id));
+                await tx.update(Schema.tickets).set({ updatedAt: new Date().toISOString(), lastMessageAt: new Date() }).where(eq(Schema.tickets.id, ticket.id));
                 if (message.attachmentIds && message.attachmentIds.length > 0) {
                     const attachmentLinks = message.attachmentIds.map((attachmentId) => ({
                         messageId: messageCreated.id,
@@ -247,7 +247,7 @@ export class TicketService extends BaseFilterableService {
                     .returning();
 
                 const ticketUpdate: { updatedAt: Date; lastMessageAt: Date; status?: TICKET_STATUS } = {
-                    updatedAt: new Date(),
+                    updatedAt: new Date().toISOString(),
                     lastMessageAt: new Date(),
                 };
 
@@ -361,7 +361,7 @@ export class TicketService extends BaseFilterableService {
 
         // Update ticket status and optionally add internal note in a transaction
         const ticket = await this.db.transaction(async (tx) => {
-            const [updatedTicket] = await tx.update(Schema.tickets).set({ status: newStatus, updatedAt: new Date() }).where(policyWhere).returning();
+            const [updatedTicket] = await tx.update(Schema.tickets).set({ status: newStatus, updatedAt: new Date().toISOString() }).where(policyWhere).returning();
 
             if (!updatedTicket) {
                 throw new NotFoundException("No ticket found or you don't have permission to update it.");
@@ -401,7 +401,7 @@ export class TicketService extends BaseFilterableService {
                 .values({ userId: user.id, consent: consent })
                 .onConflictDoUpdate({
                     target: Schema.userSettings.userId,
-                    set: { consent: consent, updatedAt: new Date() },
+                    set: { consent: consent, updatedAt: new Date().toISOString() },
                 })
                 .returning();
             return user_settings;

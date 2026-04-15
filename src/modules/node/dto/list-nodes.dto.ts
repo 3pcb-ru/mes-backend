@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
 
@@ -14,4 +15,28 @@ const paginatedListNodesSchema = z.preprocess((val: unknown) => {
     return val;
 }, PaginatedFilterQueryDto.schema.extend(listNodesSchema.shape));
 
-export class ListNodesDto extends createZodDto(paginatedListNodesSchema) {}
+export class ListNodesDto extends createZodDto(paginatedListNodesSchema) {
+    @ApiProperty({ description: 'Filter by node type', required: false })
+    type?: string;
+
+    @ApiProperty({ description: 'Filter by organization ID', required: false })
+    organizationId?: string;
+
+    @ApiProperty({ description: 'Filter by user ID', required: false })
+    userId?: string;
+
+    @ApiProperty({ description: 'Page number', example: 1, required: false, default: 1 })
+    page: number;
+
+    @ApiProperty({ description: 'Items per page', example: 10, required: false, default: 10 })
+    limit: number;
+
+    @ApiProperty({ description: 'Field to sort by', required: false })
+    sortBy?: string;
+
+    @ApiProperty({ description: 'Sort direction', enum: ['asc', 'desc'], required: false, default: 'asc' })
+    sortOrder: 'asc' | 'desc';
+
+    @ApiProperty({ description: 'Search term', required: false })
+    search?: string;
+}

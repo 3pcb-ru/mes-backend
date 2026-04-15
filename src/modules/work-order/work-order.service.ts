@@ -91,7 +91,7 @@ export class WorkOrderService extends BaseFilterableService {
                 throw new BadRequestException('Work order is not in draft status');
             }
 
-            const [updated] = await tx.update(Schema.workOrder).set({ status: 'released', updatedAt: new Date() }).where(policyWhere).returning();
+            const [updated] = await tx.update(Schema.workOrder).set({ status: 'released', updatedAt: new Date().toISOString() }).where(policyWhere).returning();
 
             await this.traceability.recordChange(
                 {

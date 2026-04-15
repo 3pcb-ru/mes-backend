@@ -9,7 +9,7 @@ import { tickets } from '@/models/schema/tickets.schema';
 import { userAddress } from '@/models/schema/user-addresses.schema';
 import { user } from '@/models/schema/users.schema';
 
-import { permissions, roles, userSettings, organization } from '../schema';
+import { organization, permissions, roles, userSettings } from '../schema';
 
 // === User Address Schemas ===
 export const userAddressInsertSchema = createInsertSchema(userAddress, standardTimestampInputOverrides);
@@ -17,7 +17,7 @@ export const userAddressSelectSchema = createSelectSchema(userAddress, standardT
 export const userAddressUpdateSchema = createUpdateSchema(userAddress, standardTimestampInputOverrides);
 
 // === User Settings Schemas ===
-export const userSettingssInsertSchema = createInsertSchema(userSettings, standardTimestampInputOverrides);
+export const userSettingsInsertSchema = createInsertSchema(userSettings, standardTimestampInputOverrides);
 export const userSettingsSelectSchema = createSelectSchema(userSettings, standardTimestampPreprocessOverrides);
 export const userSettingsUpdateSchema = createUpdateSchema(userSettings, standardTimestampInputOverrides);
 
@@ -63,13 +63,11 @@ export const organizationSelectSchema = createSelectSchema(organization, standar
 });
 
 // Public user schema (without sensitive fields)
-export const publicUserSelectSchema = userSelectSchema
-    .omit({ password: true, verificationToken: true, deletedAt: true })
-    .extend({
-        role: roleSelectSchema,
-        organization: organizationSelectSchema.optional().nullable(),
-        avatarUrl: z.string().optional().nullable(),
-    });
+export const publicUserSelectSchema = userSelectSchema.omit({ password: true, verificationToken: true, deletedAt: true }).extend({
+    role: roleSelectSchema,
+    organization: organizationSelectSchema.optional().nullable(),
+    avatarUrl: z.string().optional().nullable(),
+});
 
 // === Export Types ===
 export type UserInsertInput = z.infer<typeof userInsertSchema>;
@@ -84,7 +82,7 @@ export type UserAddressSelectOutput = z.infer<typeof userAddressSelectSchema>;
 export type UserAddressUpdateInput = z.infer<typeof userAddressUpdateSchema>;
 
 // === User Settings Schemas ===
-export type UserSettingsInput = z.infer<typeof userSettingssInsertSchema>;
+export type UserSettingsInput = z.infer<typeof userSettingsInsertSchema>;
 export type UserSettingsOutput = z.infer<typeof userSettingsSelectSchema>;
 export type UserSettingsUpdateInput = z.infer<typeof userSettingsUpdateSchema>;
 

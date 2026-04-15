@@ -44,7 +44,7 @@ export class NotificationService {
             .set({
                 status: NOTIFICATION_STATUS.READ,
                 readAt: new Date(),
-                updatedAt: new Date(),
+                updatedAt: new Date().toISOString(),
             })
             .where(policyWhere)
             .returning();
@@ -62,7 +62,7 @@ export class NotificationService {
             .set({
                 status: NOTIFICATION_STATUS.READ,
                 readAt: new Date(),
-                updatedAt: new Date(),
+                updatedAt: new Date().toISOString(),
             })
             .where(and(eq(Schema.notifications.userId, user.id), eq(Schema.notifications.status, 'unread')));
 

@@ -1,3 +1,4 @@
+import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -8,8 +9,8 @@ import { RedisService } from '@/app/services/redis/redis.service';
 import { DrizzleService } from '@/models/model.service';
 import { RolesService } from '@/modules/roles/roles.service';
 
-import { UsersService } from '../../users/users.service';
 import { SetupService } from '../../node/setup.service';
+import { UsersService } from '../../users/users.service';
 import { AuthService } from '../auth.service';
 
 describe('AuthService', () => {
@@ -519,12 +520,12 @@ describe('AuthService', () => {
 
         it('should change password successfully', async () => {
             // Mock bcrypt.compare to return true for current password
-            const bcryptCompareSpy = jest.spyOn(require('bcrypt'), 'compare');
+            const bcryptCompareSpy = jest.spyOn(bcrypt, 'compare');
             // First call: current password check -> true, Second call: new password equality check -> false
             bcryptCompareSpy.mockResolvedValueOnce(true as never).mockResolvedValueOnce(false as never);
 
             // Mock bcrypt.hash
-            const bcryptHashSpy = jest.spyOn(require('bcrypt'), 'hash');
+            const bcryptHashSpy = jest.spyOn(bcrypt, 'hash');
             bcryptHashSpy.mockResolvedValue('$2b$10$hashedNewPassword' as never);
 
             const result = await service.changePassword('user-123', 'test@example.com', changePasswordDto);
@@ -555,7 +556,7 @@ describe('AuthService', () => {
         });
 
         it('should throw error if current password is incorrect', async () => {
-            const bcryptCompareSpy = jest.spyOn(require('bcrypt'), 'compare');
+            const bcryptCompareSpy = jest.spyOn(bcrypt, 'compare');
             bcryptCompareSpy.mockResolvedValue(false as never);
 
             await expect(service.changePassword('user-123', 'test@example.com', changePasswordDto)).rejects.toThrow('Current password is incorrect.');
@@ -564,7 +565,7 @@ describe('AuthService', () => {
         });
 
         it('should throw error if new password is same as current password', async () => {
-            const bcryptCompareSpy = jest.spyOn(require('bcrypt'), 'compare');
+            const bcryptCompareSpy = jest.spyOn(bcrypt, 'compare');
             bcryptCompareSpy.mockResolvedValue(true as never);
 
             await expect(service.changePassword('user-123', 'test@example.com', changePasswordDto)).rejects.toThrow('New password must be different from your current password.');

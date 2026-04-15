@@ -115,7 +115,7 @@ export class NodeService extends BaseFilterableService {
             .update(Schema.nodes)
             .set({
                 ...payload,
-                updatedAt: new Date(),
+                updatedAt: new Date().toISOString(),
             })
             .where(policyWhere)
             .returning();
@@ -139,7 +139,7 @@ export class NodeService extends BaseFilterableService {
     async changeStatus(id: string, status: string, reason: string, user: JwtUser) {
         return await this.db.transaction(async (tx) => {
             const policyWhere = await this.policy.update(user, eq(Schema.nodes.id, id), isNull(Schema.nodes.deletedAt));
-            const [node] = await ((tx.select().from(Schema.nodes).where(policyWhere).limit(1) as any).forUpdate());
+            const [node] = await (tx.select().from(Schema.nodes).where(policyWhere).limit(1) as any).forUpdate();
             if (!node) {
                 throw new NotFoundException('Node not found');
             }
@@ -151,7 +151,7 @@ export class NodeService extends BaseFilterableService {
                 .update(Schema.nodes)
                 .set({
                     status,
-                    updatedAt: new Date(),
+                    updatedAt: new Date().toISOString(),
                 })
                 .where(eq(Schema.nodes.id, id))
                 .returning();
@@ -206,7 +206,7 @@ export class NodeService extends BaseFilterableService {
                 .set({
                     parentId: newParentId,
                     path: newPath,
-                    updatedAt: new Date(),
+                    updatedAt: new Date().toISOString(),
                 })
                 .where(policyWhere)
                 .returning();
@@ -281,7 +281,7 @@ export class NodeService extends BaseFilterableService {
                     .update(Schema.nodes)
                     .set({
                         deletedAt: new Date(),
-                        updatedAt: new Date(),
+                        updatedAt: new Date().toISOString(),
                     })
                     .where(policyWhere)
                     .returning();

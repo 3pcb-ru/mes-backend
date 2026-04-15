@@ -1,10 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { and, count, desc, eq } from 'drizzle-orm';
+import { validate as isUuid } from 'uuid';
+
 import { DrizzleService } from '@/models/model.service';
 import { userAddress } from '@/models/schema/user-addresses.schema';
-import { ListAddressQueryDto, AddressResponseDto, type CreateUserAddressDto, type UpdateUserAddressDto, updateDefaultAddressDto } from './user-addresses.dto';
 import { Pagination } from '@/types/api-response.types';
-import { validate as isUuid } from 'uuid';
+
+import { AddressResponseDto, ListAddressQueryDto, updateDefaultAddressDto, type CreateUserAddressDto, type UpdateUserAddressDto } from './user-addresses.dto';
+
 @Injectable()
 export class UserAddressesService {
     private db;
@@ -64,7 +67,7 @@ export class UserAddressesService {
         }
         const [row] = await this.db
             .update(userAddress)
-            .set({ ...data, updatedAt: new Date() })
+            .set({ ...data, updatedAt: new Date().toISOString() })
             .where(eq(userAddress.id, addressId))
             .returning();
         return row;
@@ -77,7 +80,7 @@ export class UserAddressesService {
         const [existing] = await this.db.select().from(userAddress).where(eq(userAddress.id, query.addressId)).limit(1);
         if (!existing || existing.userId !== query.userId) throw new NotFoundException('Address not found');
         await this.db.update(userAddress).set({ isDefault: false }).where(eq(userAddress.userId, query.userId));
-        const [row] = await this.db.update(userAddress).set({ isDefault: true, updatedAt: new Date() }).where(eq(userAddress.id, query.addressId)).returning();
+        const [row] = await this.db.update(userAddress).set({ isDefault: true, updatedAt: new Date().toISOString() }).where(eq(userAddress.id, query.addressId)).returning();
         return row;
     }
 

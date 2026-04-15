@@ -1,9 +1,10 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 
 import { createApiResponseSchema } from '@/common/helpers/api-response';
-import { isoDateTime, validateText } from '@/common/helpers/validations';
+import { validateText } from '@/common/helpers/validations';
 import { createStrictZodDto } from '@/common/helpers/zod-strict';
-import { uuidSchema } from '@/models/zod-schemas';
+import { organizationSelectSchema, uuidSchema } from '@/models/zod-schemas';
 
 const updateOrganizationSchema = z
     .object({
@@ -19,17 +20,58 @@ const createOrganizationSchema = z.object({
     timezone: z.string().max(50).optional().default('UTC'),
 });
 
-// Response Schema
-const organizationResponseSchema = z.object({
-    id: z.string().uuid(),
-    name: z.string(),
-    timezone: z.string(),
-    logoId: z.string().uuid().nullable(),
-    createdAt: isoDateTime,
-    updatedAt: isoDateTime,
-});
+export class UpdateOrganizationDto extends createStrictZodDto(updateOrganizationSchema) {
+    @ApiProperty({ description: 'New name for the organization', example: 'Acme Corp Updated', required: false })
+    name?: string;
 
-export class UpdateOrganizationDto extends createStrictZodDto(updateOrganizationSchema) {}
-export class CreateOrganizationDto extends createStrictZodDto(createOrganizationSchema) {}
-export class OrganizationResponseDto extends createStrictZodDto(organizationResponseSchema) {}
-export class OrganizationApiResponseDto extends createStrictZodDto(createApiResponseSchema(organizationResponseSchema)) {}
+    @ApiProperty({ description: 'ID of the organization logo attachment', example: '550e8400-e29b-41d4-a716-446655440001', required: false })
+    logoId?: string | null;
+}
+
+export class CreateOrganizationDto extends createStrictZodDto(createOrganizationSchema) {
+    @ApiProperty({ description: 'Name of the organization', example: 'Acme Corp' })
+    name: string;
+
+    @ApiProperty({ description: 'Timezone for the organization', example: 'UTC', default: 'UTC', required: false })
+    timezone: string;
+}
+
+export class OrganizationResponseDto extends createStrictZodDto(organizationSelectSchema) {
+    @ApiProperty({ description: 'Unique organization ID' })
+    id: string;
+
+    @ApiProperty({ description: 'Organization name' })
+    name: string;
+
+    @ApiProperty({ description: 'Organization timezone' })
+    timezone: string;
+
+    @ApiProperty({ description: 'Organization settings', required: false })
+    settings: any;
+
+    @ApiProperty({ description: 'ID of the organization logo', required: false })
+    logoId: string | null;
+
+    @ApiProperty({ description: 'URL of the organization logo', required: false })
+    logoUrl?: string | null;
+
+    @ApiProperty({ description: 'Creation timestamp' })
+    createdAt: Date;
+
+    @ApiProperty({ description: 'Last update timestamp' })
+    updatedAt: Date;
+
+    @ApiProperty({ description: 'Deletion timestamp', required: false })
+    deletedAt: Date | null;
+}
+
+export class OrganizationApiResponseDto extends createStrictZodDto(createApiResponseSchema(organizationSelectSchema)) {
+    @ApiProperty({ example: true })
+    success: boolean;
+
+    @ApiProperty({ example: 'Organization retrieved successfully' })
+    message: string;
+
+    @ApiProperty({ type: OrganizationResponseDto })
+    data: OrganizationResponseDto;
+}

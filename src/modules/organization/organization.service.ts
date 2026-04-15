@@ -1,11 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { eq, and } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
+
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
-import { AttachmentService } from '../attachments/attachment.service';
-import { CreateOrganizationDto, UpdateOrganizationDto } from './organization.dto';
 import { JwtUser } from '@/types/jwt.types';
+
+import { AttachmentService } from '../attachments/attachment.service';
 import { SetupService } from '../node/setup.service';
+import { CreateOrganizationDto, UpdateOrganizationDto } from './organization.dto';
 
 @Injectable()
 export class OrganizationService {
@@ -31,10 +33,7 @@ export class OrganizationService {
                 .returning();
 
             // 2. Link the user to the organization
-            await tx
-                .update(Schema.user)
-                .set({ organizationId: org.id })
-                .where(eq(Schema.user.id, user.id));
+            await tx.update(Schema.user).set({ organizationId: org.id }).where(eq(Schema.user.id, user.id));
 
             // 3. Create default setup (nodes, etc.)
             await this.setupService.createDefaultSetup(tx, org.id, data.name);
@@ -70,7 +69,7 @@ export class OrganizationService {
             .update(Schema.organization)
             .set({
                 ...data,
-                updatedAt: new Date(),
+                updatedAt: new Date().toISOString(),
             })
             .where(eq(Schema.organization.id, organizationId))
             .returning({
@@ -102,16 +101,12 @@ export class OrganizationService {
     }
 
     async findOne(id: string) {
-        const [org] = await this.db
-            .select()
-            .from(Schema.organization)
-            .where(eq(Schema.organization.id, id))
-            .limit(1);
-        
+        const [org] = await this.db.select().from(Schema.organization).where(eq(Schema.organization.id, id)).limit(1);
+
         if (!org) {
             throw new NotFoundException('Organization not found');
         }
-        
+
         return org;
     }
 }

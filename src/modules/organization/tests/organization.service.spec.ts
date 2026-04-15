@@ -1,10 +1,12 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+
 import { DrizzleService } from '@/models/model.service';
+
 import { AttachmentService } from '../../attachments/attachment.service';
-import { OrganizationService } from '../organization.service';
-import { CreateOrganizationDto, UpdateOrganizationDto } from '../organization.dto';
 import { SetupService } from '../../node/setup.service';
+import { CreateOrganizationDto, UpdateOrganizationDto } from '../organization.dto';
+import { OrganizationService } from '../organization.service';
 
 describe('OrganizationService', () => {
     let service: OrganizationService;
@@ -16,8 +18,8 @@ describe('OrganizationService', () => {
         name: 'Test Org',
         timezone: 'UTC',
         logoId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
     };
 
     const mockUser = {
@@ -117,7 +119,7 @@ describe('OrganizationService', () => {
         it('should update logoId successfully after validation', async () => {
             const updateData: UpdateOrganizationDto = { logoId: 'logo-1' };
             const updatedOrg = { ...mockOrg, logoId: 'logo-1' };
-            
+
             mockAttachmentService.findOne.mockResolvedValue({
                 id: 'logo-1',
                 isUploaded: true,
@@ -133,7 +135,7 @@ describe('OrganizationService', () => {
 
         it('should throw BadRequestException if logo file has not been uploaded', async () => {
             const updateData: UpdateOrganizationDto = { logoId: 'logo-1' };
-            
+
             mockAttachmentService.findOne.mockResolvedValue({
                 id: 'logo-1',
                 isUploaded: false,
@@ -145,7 +147,7 @@ describe('OrganizationService', () => {
 
         it('should throw BadRequestException if logo is not an image', async () => {
             const updateData: UpdateOrganizationDto = { logoId: 'logo-1' };
-            
+
             mockAttachmentService.findOne.mockResolvedValue({
                 id: 'logo-1',
                 isUploaded: true,

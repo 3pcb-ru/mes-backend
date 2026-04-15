@@ -1,11 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
+
+import { JwtUser } from '@/types/jwt.types';
 import { GET_PAYLOAD } from '@/utils/ok.utils';
-import { OrganizationController } from '../organization.controller';
-import { OrganizationService } from '../organization.service';
+
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { PermissionGuard } from '../../auth/guards/permission.guard';
+import { OrganizationController } from '../organization.controller';
 import { CreateOrganizationDto, UpdateOrganizationDto } from '../organization.dto';
-import { JwtUser } from '@/types/jwt.types';
+import { OrganizationService } from '../organization.service';
 
 describe('OrganizationController', () => {
     let controller: OrganizationController;
@@ -16,8 +18,8 @@ describe('OrganizationController', () => {
         name: 'Test Org',
         timezone: 'UTC',
         logoId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
     };
 
     const mockUser: JwtUser = {
@@ -43,15 +45,15 @@ describe('OrganizationController', () => {
                 },
             ],
         })
-        .overrideGuard(JwtAuthGuard)
-        .useValue({ canActivate: () => true })
-        .overrideGuard(PermissionGuard)
-        .useValue({ canActivate: () => true })
-        .compile();
+            .overrideGuard(JwtAuthGuard)
+            .useValue({ canActivate: () => true })
+            .overrideGuard(PermissionGuard)
+            .useValue({ canActivate: () => true })
+            .compile();
 
         controller = module.get<OrganizationController>(OrganizationController);
         service = module.get<OrganizationService>(OrganizationService);
-        
+
         jest.clearAllMocks();
     });
 

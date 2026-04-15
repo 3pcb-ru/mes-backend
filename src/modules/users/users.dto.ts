@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { z } from 'zod';
 
 import { createApiPaginatedResponseSchema, createApiResponseSchema } from '@/common/helpers/api-response';
@@ -12,6 +13,9 @@ import {
     type UserSelectOutput,
     type UserUpdateInput,
 } from '@/models/zod-schemas';
+
+import { OrganizationResponseDto } from '../organization/organization.dto';
+import { RoleResponseDto } from '../roles/roles.dto';
 
 // Base schemas for user operations
 const loginSchema = z.object({
@@ -76,34 +80,177 @@ const acceptInvitationSchema = z.object({
     password: validateText({ regex: passwordRegex, min: 8, max: 15 }),
 });
 
-
-// Response schemas (using drizzle schemas with timestamp overrides)
-const userResponseSchema = publicUserSelectSchema;
-
-const fullUserResponseSchema = userSelectSchema;
-
 // DTO Classes
-export class LoginDto extends createStrictZodDto(loginSchema) {}
-export class UpdateUserProfileDto extends createStrictZodDto(updateUserProfileSchema) {}
-export class VerifyEmailDto extends createStrictZodDto(verifyEmailSchema) {}
-export class ForgotPasswordDto extends createStrictZodDto(forgotPasswordSchema) {}
-export class ResetPasswordDto extends createStrictZodDto(resetPasswordSchema) {}
-export class ChangePasswordDto extends createStrictZodDto(changePasswordSchema) {}
-export class ResendVerificationDto extends createStrictZodDto(resendVerificationSchema) {}
-export class InviteUserDto extends createStrictZodDto(inviteUserSchema) {}
-export class AcceptInvitationDto extends createStrictZodDto(acceptInvitationSchema) {}
-export class UpdateUserStatusDto extends createStrictZodDto(z.object({ status: z.enum(['active', 'inactive']) })) {}
+export class LoginDto extends createStrictZodDto(loginSchema) {
+    @ApiProperty({ description: 'User email address', example: 'user@example.com' })
+    email: string;
 
+    @ApiProperty({ description: 'User password', example: 'P@ssword123' })
+    password: string;
+}
 
-// API response wrappers matching ResponseInterceptor
-const userApiResponseSchema = createApiResponseSchema(userResponseSchema);
-const fullUserApiResponseSchema = createApiResponseSchema(fullUserResponseSchema);
-const userPaginatedApiResponseSchema = createApiPaginatedResponseSchema(userResponseSchema);
+export class UpdateUserProfileDto extends createStrictZodDto(updateUserProfileSchema) {
+    @ApiProperty({ description: 'User first name', example: 'John', required: false })
+    firstName: string;
 
-// Response DTOs should NOT be strict-transformed; use original createZodDto behavior via wrapper
-export class UserApiResponseDto extends createStrictZodDto(userApiResponseSchema) {}
-export class FullUserApiResponseDto extends createStrictZodDto(fullUserApiResponseSchema) {}
-export class UserPaginatedApiResponseDto extends createStrictZodDto(userPaginatedApiResponseSchema) {}
+    @ApiProperty({ description: 'User last name', example: 'Doe', required: false })
+    lastName: string;
+
+    @ApiProperty({ description: 'User phone number', example: '+1234567890', required: false })
+    phone?: string;
+
+    @ApiProperty({ description: 'User avatar URL', example: 'https://example.com/avatar.jpg', required: false })
+    avatarUrl?: string | null;
+}
+
+export class VerifyEmailDto extends createStrictZodDto(verifyEmailSchema) {
+    @ApiProperty({ description: 'Verification code sent to email', example: '123456' })
+    code: string;
+
+    @ApiProperty({ description: 'User email address', example: 'user@example.com' })
+    email: string;
+}
+
+export class ForgotPasswordDto extends createStrictZodDto(forgotPasswordSchema) {
+    @ApiProperty({ description: 'User email address', example: 'user@example.com' })
+    email: string;
+}
+
+export class ResetPasswordDto extends createStrictZodDto(resetPasswordSchema) {
+    @ApiProperty({ description: 'User email address', example: 'user@example.com' })
+    email: string;
+
+    @ApiProperty({ description: 'Reset code received via email', example: '123456' })
+    code: string;
+
+    @ApiProperty({ description: 'New password', example: 'NewP@ssword123' })
+    password: string;
+}
+
+export class ChangePasswordDto extends createStrictZodDto(changePasswordSchema) {
+    @ApiProperty({ description: 'Current password', example: 'OldP@ssword123' })
+    currentPassword: string;
+
+    @ApiProperty({ description: 'New password', example: 'NewP@ssword123' })
+    password: string;
+}
+
+export class ResendVerificationDto extends createStrictZodDto(resendVerificationSchema) {
+    @ApiProperty({ description: 'User email address', example: 'user@example.com' })
+    email: string;
+}
+
+export class InviteUserDto extends createStrictZodDto(inviteUserSchema) {
+    @ApiProperty({ description: 'User email address', example: 'invitee@example.com' })
+    email: string;
+
+    @ApiProperty({ description: 'User first name', example: 'Jane' })
+    firstName: string;
+
+    @ApiProperty({ description: 'User last name', example: 'Smith' })
+    lastName: string;
+
+    @ApiProperty({ description: 'Role ID to assign', example: '550e8400-e29b-41d4-a716-446655440001' })
+    roleId: string;
+}
+
+export class AcceptInvitationDto extends createStrictZodDto(acceptInvitationSchema) {
+    @ApiProperty({ description: 'Invitation token from email', example: 'token123' })
+    token: string;
+
+    @ApiProperty({ description: 'New password to set', example: 'SetsP@ssword123' })
+    password: string;
+}
+
+export class UpdateUserStatusDto extends createStrictZodDto(z.object({ status: z.enum(['active', 'inactive']) })) {
+    @ApiProperty({ description: 'New status for the user', enum: ['active', 'inactive'], example: 'active' })
+    status: 'active' | 'inactive';
+}
+
+// Response schemas
+export class UserResponseDto {
+    @ApiProperty({ description: 'Unique user ID' })
+    id: string;
+
+    @ApiProperty({ description: 'User email' })
+    email: string;
+
+    @ApiProperty({ description: 'User first name' })
+    firstName: string;
+
+    @ApiProperty({ description: 'User last name' })
+    lastName: string;
+
+    @ApiProperty({ description: 'User phone number', required: false })
+    phone?: string | null;
+
+    @ApiProperty({ description: 'User avatar ID', required: false })
+    avatarId: string | null;
+
+    @ApiProperty({ description: 'User avatar URL', required: false })
+    avatarUrl?: string | null;
+
+    @ApiProperty({ description: 'Verification status' })
+    isVerified: boolean | null;
+
+    @ApiProperty({ description: 'Creation timestamp' })
+    createdAt: Date;
+
+    @ApiProperty({ description: 'Last update timestamp' })
+    updatedAt: Date;
+
+    @ApiProperty({ description: 'Deletion timestamp', required: false })
+    deletedAt?: Date | null;
+
+    @ApiProperty({ description: 'User role ID' })
+    roleId: string;
+
+    @ApiProperty({ description: 'User role details' })
+    role: RoleResponseDto;
+
+    @ApiProperty({ description: 'User organization ID', required: false })
+    organizationId: string | null;
+
+    @ApiProperty({ description: 'User organization details', required: false })
+    organization?: OrganizationResponseDto | null;
+}
+
+// API response wrappers
+export class UserApiResponseDto extends createStrictZodDto(createApiResponseSchema(publicUserSelectSchema)) {
+    @ApiProperty({ example: true })
+    success: boolean;
+
+    @ApiProperty({ example: 'User retrieved successfully' })
+    message: string;
+
+    @ApiProperty({ type: UserResponseDto })
+    data: UserResponseDto;
+}
+
+export class FullUserApiResponseDto extends createStrictZodDto(createApiResponseSchema(userSelectSchema)) {
+    @ApiProperty({ example: true })
+    success: boolean;
+
+    @ApiProperty({ example: 'User retrieved successfully' })
+    message: string;
+
+    @ApiProperty({ type: UserResponseDto })
+    data: any;
+}
+
+export class UserPaginatedApiResponseDto extends createStrictZodDto(createApiPaginatedResponseSchema(publicUserSelectSchema)) {
+    @ApiProperty({ example: true })
+    success: boolean;
+
+    @ApiProperty({ example: 'Users retrieved successfully' })
+    message: string;
+
+    @ApiProperty({ type: [UserResponseDto] })
+    data: UserResponseDto[];
+
+    @ApiProperty()
+    pagination: any;
+}
 
 // Re-export from zod-schemas for service layer
 export type { UserInsertInput, UserUpdateInput, UserSelectOutput, PublicUserOutput };
