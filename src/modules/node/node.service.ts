@@ -1,48 +1,52 @@
 import * as crypto from 'crypto';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm';
+
+import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { BaseFilterableService } from '@/common/services/base-filterable.service';
 import { FilterService } from '@/common/services/filter.service';
-
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
 
 import { CreateNodeDto } from './dto/create-node.dto';
 import { ListNodesDto } from './dto/list-nodes.dto';
 import { UpdateNodeDto } from './dto/update-node.dto';
+import { JwtUser } from '@/types/jwt.types';
+import { NodePolicy } from './node.policy';
 
 @Injectable()
 export class NodeService extends BaseFilterableService {
-    private db;
+    private readonly policy = new NodePolicy();
 
     constructor(
         private readonly drizzle: DrizzleService,
+        private readonly logger: CustomLoggerService,
         filterService: FilterService,
     ) {
         super(filterService);
-        this.db = this.drizzle.database;
+        this.logger.setContext(NodeService.name);
     }
 
-    async list(query?: ListNodesDto, organizationId?: string, userId?: string) {
-        console.info(`[NodeService.list] Org: ${organizationId}, User: ${userId}`, query);
+    private get db() {
+        return this.drizzle.database;
+    }
+
+    async list(query: ListNodesDto, user: JwtUser) {
+        this.logger.log(`[NodeService.list] User: ${user.id}`, query);
+        
+        const policyWhere = await this.policy.read(user, isNull(Schema.nodes.deletedAt));
+
         let qb = this.filterable(this.db, Schema.nodes, {
             defaultSortColumn: 'createdAt',
         })
             .join(Schema.nodeDefinitions, eq(Schema.nodes.definitionId, Schema.nodeDefinitions.id), 'left')
             .filter(query || {})
             .orderByFromQuery(query || {}, 'createdAt')
-            .paginate(query || {});
+            .paginate(query || {})
+            .where(policyWhere);
 
         if (query?.type) {
             qb = qb.where(eq(Schema.nodeDefinitions.type, query.type as (typeof Schema.nodeTypeEnum.enumValues)[number]));
-        }
-
-        if (organizationId || query?.organizationId) {
-            qb = qb.where(eq(Schema.nodes.organizationId, (organizationId || query?.organizationId) as string));
-        }
-
-        if (userId || query?.userId) {
-            qb = qb.where(eq(Schema.nodes.userId, (userId || query?.userId) as string));
         }
 
         const result = await qb.selectFields({
@@ -52,7 +56,9 @@ export class NodeService extends BaseFilterableService {
         return result;
     }
 
-    async create(organizationId: string, payload: CreateNodeDto) {
+    async create(payload: CreateNodeDto, user: JwtUser) {
+        if (!user.organizationId) throw new BadRequestException('User organization required to create node');
+        const organizationId = user.organizationId;
         const id = crypto.randomUUID();
         const segment = id.replace(/-/g, '_');
 
@@ -81,30 +87,41 @@ export class NodeService extends BaseFilterableService {
         return node;
     }
 
-    async findOne(id: string) {
-        const [node] = await this.db.select().from(Schema.nodes).where(eq(Schema.nodes.id, id)).limit(1);
+    async findOne(id: string, user?: JwtUser) {
+        const _where = user ? await this.policy.read(user, eq(Schema.nodes.id, id), isNull(Schema.nodes.deletedAt)) : and(eq(Schema.nodes.id, id), isNull(Schema.nodes.deletedAt));
+        
+        const [node] = await this.db
+            .select()
+            .from(Schema.nodes)
+            .where(_where!)
+            .limit(1);
         if (!node) throw new NotFoundException('Node not found');
         return node;
     }
 
-    async update(id: string, payload: UpdateNodeDto) {
+    async update(id: string, payload: UpdateNodeDto, user: JwtUser) {
+        const policyWhere = await this.policy.update(user, eq(Schema.nodes.id, id), isNull(Schema.nodes.deletedAt));
         const [updated] = await this.db
             .update(Schema.nodes)
             .set({
                 ...payload,
                 updatedAt: new Date(),
             })
-            .where(eq(Schema.nodes.id, id))
+            .where(policyWhere)
             .returning();
 
         if (!updated) throw new NotFoundException('Node not found');
         return updated;
     }
 
-    async changeStatus(id: string, status: string, reason: string, userId: string, organizationId: string) {
+    async changeStatus(id: string, status: string, reason: string, user: JwtUser) {
         return await this.db.transaction(async (tx) => {
-            // Fetch the node first, so we know the previous status and ensure it belongs to the org
-            const [node] = await tx.select().from(Schema.nodes).where(eq(Schema.nodes.id, id)).limit(1);
+            const policyWhere = await this.policy.update(user, eq(Schema.nodes.id, id), isNull(Schema.nodes.deletedAt));
+            const [node] = await tx
+                .select()
+                .from(Schema.nodes)
+                .where(policyWhere)
+                .limit(1);
             if (!node) {
                 throw new NotFoundException('Node not found');
             }
@@ -123,8 +140,8 @@ export class NodeService extends BaseFilterableService {
 
             // 2. Log the change to activity_logs
             await tx.insert(Schema.activityLogs).values({
-                organizationId,
-                userId,
+                organizationId: user.organizationId!,
+                userId: user.id,
                 nodeId: id,
                 actionType: 'NODE_STATUS_CHANGE',
                 metadata: {
@@ -138,19 +155,25 @@ export class NodeService extends BaseFilterableService {
         });
     }
 
-    async move(id: string, newParentId: string | null) {
+    async move(id: string, newParentId: string | null, user: JwtUser) {
         return await this.db.transaction(async (tx) => {
-            const node = await this.findOne(id);
+            const node = await this.findOne(id, user);
 
             const segment = node.id.replace(/-/g, '_');
             let newPath = `root_${segment}`;
             if (newParentId) {
-                const parent = await tx.select().from(Schema.nodes).where(eq(Schema.nodes.id, newParentId)).limit(1);
+                const parentReadWhere = await this.policy.read(user, eq(Schema.nodes.id, newParentId), isNull(Schema.nodes.deletedAt));
+                const parent = await tx
+                    .select()
+                    .from(Schema.nodes)
+                    .where(parentReadWhere)
+                    .limit(1);
                 if (!parent[0]) throw new NotFoundException('Parent node not found');
                 newPath = `${parent[0].path}.${segment}`;
             }
 
             // Update the node itself
+            const policyWhere = await this.policy.update(user, eq(Schema.nodes.id, id), isNull(Schema.nodes.deletedAt));
             const [updated] = await tx
                 .update(Schema.nodes)
                 .set({
@@ -158,7 +181,7 @@ export class NodeService extends BaseFilterableService {
                     path: newPath,
                     updatedAt: new Date(),
                 })
-                .where(eq(Schema.nodes.id, id))
+                .where(policyWhere)
                 .returning();
 
             // Update all descendants' paths using ltree functions
@@ -172,28 +195,34 @@ export class NodeService extends BaseFilterableService {
         });
     }
 
-    async delete(id: string) {
+    async delete(id: string, user: JwtUser) {
         return await this.db.transaction(async (tx) => {
-            const node = await this.findOne(id);
+            const node = await this.findOne(id, user);
 
             // 1. Check for children
-            const children = await tx.select().from(Schema.nodes).where(and(eq(Schema.nodes.parentId, id), isNull(Schema.nodes.deletedAt))).limit(1);
+            const children = await tx
+                .select()
+                .from(Schema.nodes)
+                .where(and(eq(Schema.nodes.parentId, id), isNull(Schema.nodes.deletedAt)))
+                .limit(1);
             if (children.length > 0) {
-                throw new Error('Cannot delete node with active children. Move or delete children first.');
+                throw new BadRequestException('Cannot delete node with active children. Move or delete children first.');
             }
 
             // 2. Check for active execution jobs
             const jobs = await tx.select().from(Schema.executionJobs).where(eq(Schema.executionJobs.nodeId, id)).limit(1);
             if (jobs.length > 0) {
-                throw new Error('Cannot delete node referenced in execution jobs.');
+                throw new BadRequestException('Cannot delete node referenced in execution jobs.');
             }
 
             // 3. Check for activity logs to decide Hard vs Soft delete
             const logs = await tx.select().from(Schema.activityLogs).where(eq(Schema.activityLogs.nodeId, id)).limit(1);
 
+            const policyWhere = await this.policy.delete(user, eq(Schema.nodes.id, id), isNull(Schema.nodes.deletedAt));
+
             if (logs.length === 0 && node.status === 'IDLE') {
                 // Hard Delete
-                await tx.delete(Schema.nodes).where(eq(Schema.nodes.id, id));
+                await tx.delete(Schema.nodes).where(policyWhere);
                 return { message: 'Node hard-deleted successfully', type: 'hard' };
             } else {
                 // Soft Delete
@@ -203,7 +232,7 @@ export class NodeService extends BaseFilterableService {
                         deletedAt: new Date(),
                         updatedAt: new Date(),
                     })
-                    .where(eq(Schema.nodes.id, id));
+                    .where(policyWhere);
                 return { message: 'Node archived successfully', type: 'soft' };
             }
         });

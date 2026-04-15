@@ -18,6 +18,6 @@ export class ConnectivityController {
     @ConnectivityDecorators.ingest()
     async ingest(@Body() body: NodeEventDto) {
         const result = await this.svc.ingest(body);
-        return ok(result);
+        return ok(result).message('Event ingested successfully');
     }
 }

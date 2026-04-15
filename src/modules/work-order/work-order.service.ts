@@ -1,21 +1,31 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
+import { JwtUser } from '@/types/jwt.types';
+
+import { WorkOrderPolicy } from './work-order.policy';
 
 @Injectable()
 export class WorkOrderService {
-    private db;
+    private readonly policy = new WorkOrderPolicy();
 
-    constructor(private readonly drizzle: DrizzleService) {
-        this.db = this.drizzle.database;
+    constructor(private readonly drizzle: DrizzleService) {}
+
+    private get db() {
+        return this.drizzle.database;
     }
 
-    async createWorkOrder(organizationId: string, bomRevisionId: string, targetQuantity: number) {
+    async createWorkOrder(bomRevisionId: string, targetQuantity: number, user: JwtUser) {
+        if (!user.organizationId) throw new BadRequestException('User organization required to create work order');
+        const organizationId = user.organizationId;
+
+        await this.policy.canWrite(user);
+
         // Validate BOM exists and is released
         const revision = await this.db.query.bomRevision.findFirst({
-            where: eq(Schema.bomRevision.id, bomRevisionId),
+            where: and(eq(Schema.bomRevision.id, bomRevisionId), isNull(Schema.bomRevision.deletedAt)),
             with: {
                 product: true,
             },
@@ -46,9 +56,10 @@ export class WorkOrderService {
         return workOrder;
     }
 
-    async releaseWorkOrder(workOrderId: string, organizationId: string) {
+    async releaseWorkOrder(workOrderId: string, user: JwtUser) {
+        const policyWhere = await this.policy.update(user, eq(Schema.workOrder.id, workOrderId), isNull(Schema.workOrder.deletedAt));
         const wo = await this.db.query.workOrder.findFirst({
-            where: and(eq(Schema.workOrder.id, workOrderId), eq(Schema.workOrder.organizationId, organizationId)),
+            where: policyWhere,
         });
 
         if (!wo) throw new NotFoundException('Work Order not found');
@@ -57,14 +68,15 @@ export class WorkOrderService {
             throw new BadRequestException('Work order is not in draft status');
         }
 
-        await this.db.update(Schema.workOrder).set({ status: 'released', updatedAt: new Date() }).where(eq(Schema.workOrder.id, workOrderId));
+        await this.db.update(Schema.workOrder).set({ status: 'released', updatedAt: new Date() }).where(policyWhere);
 
         return { message: 'Work order released' };
     }
 
-    async listWorkOrders(organizationId: string) {
+    async listWorkOrders(user: JwtUser) {
+        const policyWhere = await this.policy.read(user, isNull(Schema.workOrder.deletedAt));
         return await this.db.query.workOrder.findMany({
-            where: eq(Schema.workOrder.organizationId, organizationId),
+            where: policyWhere,
             with: {
                 bomRevision: {
                     with: {

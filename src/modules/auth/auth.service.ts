@@ -1,5 +1,6 @@
 import * as crypto from 'crypto';
 import { BadRequestException, ConflictException, Injectable, NotFoundException, NotImplementedException, PreconditionFailedException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcrypt';
 
@@ -35,6 +36,7 @@ export class AuthService {
         private readonly rolesService: RolesService,
         private readonly drizzle: DrizzleService,
         private readonly setupService: SetupService,
+        private readonly configService: ConfigService,
     ) {
         this.logger.setContext(AuthService.name);
         this.db = this.drizzle.database;
@@ -616,4 +618,3 @@ export class AuthService {
         };
     }
 }
-

@@ -20,8 +20,6 @@ import { CreateRoleDto, UpdateRoleDetailsDto } from './roles.dto';
 
 @Injectable()
 export class RolesService extends BaseFilterableService {
-    private db;
-
     constructor(
         private readonly drizzle: DrizzleService,
         private readonly logger: CustomLoggerService,
@@ -34,7 +32,10 @@ export class RolesService extends BaseFilterableService {
         if (this.logger) {
             this.logger.setContext(RolesService.name);
         }
-        this.db = this.drizzle.database;
+    }
+
+    private get db() {
+        return this.drizzle.database;
     }
 
     async syncAll() {
@@ -236,7 +237,7 @@ export class RolesService extends BaseFilterableService {
         });
 
         if (!role) {
-            throw new NotFoundException(`Role cannot found for id ${roleId}`);
+            throw new NotFoundException(`Role not found for id ${roleId}`);
         }
 
         return role;
@@ -265,7 +266,7 @@ export class RolesService extends BaseFilterableService {
         });
 
         if (!role) {
-            throw new NotFoundException(`Role cannot found for id ${roleId}`);
+            throw new NotFoundException(`Role not found for id ${roleId}`);
         }
 
         const { rolePermissions, ...rest } = role;
@@ -354,7 +355,7 @@ export class RolesService extends BaseFilterableService {
         });
 
         if (activeUsers) {
-            throw new BadRequestException('rules in use by active user');
+            throw new BadRequestException('Role is in use by active users');
         }
 
         const [deleted] = await this.db.update(roleSchema).set({ deletedAt: new Date() }).where(eq(roleSchema.id, roleId)).returning();

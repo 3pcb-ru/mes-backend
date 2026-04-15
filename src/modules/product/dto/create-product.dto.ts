@@ -1,11 +1,10 @@
 import { z } from 'zod';
-
+import { nameRegex, validateText } from '@/common/helpers/validations';
 import { createStrictZodDto } from '@/common/helpers/zod-strict';
 
 const createProductSchema = z.object({
-    tenantId: z.string().optional(),
-    sku: z.string().min(1, 'SKU is required'),
-    name: z.string().min(1, 'Name is required'),
+    sku: validateText({ min: 1 }),
+    name: validateText({ regex: nameRegex, min: 1 }),
 });
 
 export class CreateProductDto extends createStrictZodDto(createProductSchema) {}

@@ -4,14 +4,14 @@ import { FilterService } from '@/common/services/filter.service';
 import { DrizzleModule } from '@/models/model.module';
 
 import { NodeController } from './node.controller';
+import { NodePolicy } from './node.policy';
 import { NodeService } from './node.service';
-
 import { SetupService } from './setup.service';
 
 @Module({
     imports: [DrizzleModule],
     controllers: [NodeController],
-    providers: [NodeService, SetupService, FilterService],
-    exports: [NodeService, SetupService],
+    providers: [NodeService, SetupService, FilterService, NodePolicy],
+    exports: [NodeService, SetupService, NodePolicy],
 })
 export class NodeModule {}

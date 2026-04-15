@@ -1,13 +1,15 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
-import { CreateWorkOrderDto } from './dto/create-work-order.dto';
-import { ExecutionService } from './execution.service';
+import { CurrentUser } from '@/common/decorators/user.decorator';
+import { JwtUser } from '@/types/jwt.types';
 import { ok } from '@/utils';
 
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { CreateWorkOrderDto } from './dto/create-work-order.dto';
 import { ExecutionDecorators } from './execution.decorators';
+import { ExecutionService } from './execution.service';
 
-@ApiTags('Execution (Mock)')
+@ApiTags('Execution')
 @ApiBearerAuth()
 @Controller('execution')
 export class ExecutionController {
@@ -15,22 +17,22 @@ export class ExecutionController {
 
     @Get()
     @ExecutionDecorators.list()
-    async list() {
-        const result = await this.svc.listWorkOrders();
-        return ok(result);
+    async list(@CurrentUser() user: JwtUser) {
+        const result = await this.svc.listWorkOrders(user);
+        return ok(result).message('Work orders retrieved successfully');
     }
 
     @Post()
     @ExecutionDecorators.create()
-    async create(@Body() body: CreateWorkOrderDto) {
-        const result = await this.svc.createWorkOrder(body);
-        return ok(result);
+    async create(@CurrentUser() user: JwtUser, @Body() body: CreateWorkOrderDto) {
+        const result = await this.svc.createWorkOrder(body, user);
+        return ok(result).message('Work order created successfully');
     }
 
     @Get(':id')
     @ExecutionDecorators.get()
-    async get(@Param('id') id: string) {
-        const result = await this.svc.getWorkOrder(id);
-        return ok(result);
+    async get(@CurrentUser() user: JwtUser, @Param('id') id: string) {
+        const result = await this.svc.getWorkOrder(id, user);
+        return ok(result).message('Work order retrieved successfully');
     }
 }

@@ -1,15 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
-import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '@/common/decorators/user.decorator';
+import { JwtUser } from '@/types/jwt.types';
 import { ok } from '@/utils';
 
+import { BomDecorators } from './bom.decorators';
 import { BomService } from './bom.service';
-import { BomMaterialDetailResponseDto, BomMaterialListResponseDto } from './dto/bom-response.dto';
 import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
-
-import { BomDecorators } from './bom.decorators';
 
 @ApiTags('BOM')
 @ApiBearerAuth()
@@ -19,25 +18,25 @@ export class MaterialController {
 
     @Get()
     @BomDecorators.getMaterials()
-    async getMaterials(@Param('revisionId') revisionId: string) {
-        return ok(await this.bomService.getMaterials(revisionId));
+    async getMaterials(@Param('revisionId') revisionId: string, @CurrentUser() user: JwtUser) {
+        return ok(await this.bomService.getMaterials(revisionId, user)).message('Materials retrieved successfully');
     }
 
     @Post()
     @BomDecorators.addMaterial()
-    async addMaterial(@Param('revisionId') revisionId: string, @Body() dto: CreateMaterialDto) {
-        return ok(await this.bomService.addMaterial(revisionId, dto));
+    async addMaterial(@Param('revisionId') revisionId: string, @Body() dto: CreateMaterialDto, @CurrentUser() user: JwtUser) {
+        return ok(await this.bomService.addMaterial(revisionId, dto, user)).message('Material added successfully');
     }
 
     @Put(':id')
     @BomDecorators.updateMaterial()
-    async updateMaterial(@Param('revisionId') revisionId: string, @Param('id') id: string, @Body() dto: UpdateMaterialDto) {
-        return ok(await this.bomService.updateMaterial(revisionId, id, dto));
+    async updateMaterial(@Param('revisionId') revisionId: string, @Param('id') id: string, @Body() dto: UpdateMaterialDto, @CurrentUser() user: JwtUser) {
+        return ok(await this.bomService.updateMaterial(revisionId, id, dto, user)).message('Material updated successfully');
     }
 
     @Delete(':id')
     @BomDecorators.deleteMaterial()
-    async deleteMaterial(@Param('revisionId') revisionId: string, @Param('id') id: string) {
-        return ok(await this.bomService.deleteMaterial(revisionId, id));
+    async deleteMaterial(@Param('revisionId') revisionId: string, @Param('id') id: string, @CurrentUser() user: JwtUser) {
+        return ok(await this.bomService.deleteMaterial(revisionId, id, user)).message('Material removed successfully');
     }
 }

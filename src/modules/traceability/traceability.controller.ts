@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 
+import { CurrentUser } from '@/common/decorators/user.decorator';
+import { JwtUser } from '@/types/jwt.types';
 import { ok } from '@/utils';
 
 import { CreateActivityDto } from './dto/create-activity.dto';
@@ -16,22 +18,22 @@ export class TraceabilityController {
 
     @Get('activities')
     @TraceabilityDecorators.list()
-    async list() {
-        const result = await this.svc.list();
-        return ok(result);
+    async list(@CurrentUser() user: JwtUser) {
+        const result = await this.svc.list(user);
+        return ok(result).message('Activity logs retrieved successfully');
     }
 
     @Get('activities/:id')
     @TraceabilityDecorators.getById()
-    async getById(@Param('id') id: string) {
-        const result = await this.svc.getById(id);
-        return ok(result);
+    async getById(@CurrentUser() user: JwtUser, @Param('id') id: string) {
+        const result = await this.svc.getById(id, user);
+        return ok(result).message('Activity log retrieved successfully');
     }
 
     @Post('activities')
     @TraceabilityDecorators.create()
-    async create(@Body() body: CreateActivityDto) {
-        const result = await this.svc.create(body);
-        return ok(result);
+    async create(@CurrentUser() user: JwtUser, @Body() body: CreateActivityDto) {
+        const result = await this.svc.create(body, user);
+        return ok(result).message('Activity log created successfully');
     }
 }

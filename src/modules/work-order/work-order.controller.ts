@@ -1,13 +1,12 @@
-import { Body, Controller, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
-import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '@/common/decorators/user.decorator';
 import { JwtUser } from '@/types/jwt.types';
 import { ok } from '@/utils';
 
-import { WorkOrderService } from './work-order.service';
-
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { WorkOrderDecorators } from './work-order.decorators';
+import { WorkOrderService } from './work-order.service';
 
 @ApiTags('Work Orders')
 @ApiBearerAuth()
@@ -17,19 +16,19 @@ export class WorkOrderController {
 
     @Post()
     @WorkOrderDecorators.createWorkOrder()
-    async createWorkOrder(@Request() req: { user: JwtUser }, @Body() body: { bomRevisionId: string; targetQuantity: number }) {
-        return ok(await this.workOrderService.createWorkOrder(req.user.organizationId, body.bomRevisionId, body.targetQuantity));
+    async createWorkOrder(@CurrentUser() user: JwtUser, @Body() body: { bomRevisionId: string; targetQuantity: number }) {
+        return ok(await this.workOrderService.createWorkOrder(body.bomRevisionId, body.targetQuantity, user)).message('Work order created successfully');
     }
 
     @Post('release/:id')
     @WorkOrderDecorators.releaseWorkOrder()
-    async releaseWorkOrder(@Request() req: { user: JwtUser }, @Param('id') id: string) {
-        return ok(await this.workOrderService.releaseWorkOrder(id, req.user.organizationId));
+    async releaseWorkOrder(@CurrentUser() user: JwtUser, @Param('id') id: string) {
+        return ok(await this.workOrderService.releaseWorkOrder(id, user)).message('Work order released successfully');
     }
 
     @Get()
     @WorkOrderDecorators.listWorkOrders()
-    async listWorkOrders(@Request() req: { user: JwtUser }) {
-        return ok(await this.workOrderService.listWorkOrders(req.user.organizationId));
+    async listWorkOrders(@CurrentUser() user: JwtUser) {
+        return ok(await this.workOrderService.listWorkOrders(user)).message('Work orders retrieved successfully');
     }
 }

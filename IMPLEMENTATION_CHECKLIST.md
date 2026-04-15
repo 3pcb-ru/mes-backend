@@ -69,8 +69,8 @@
 
 ## 2. Schema & Database Checklist
 
-- [ ] New tables follow the standard shape: `id` (uuid, defaultRandom, PK), `createdAt`, `updatedAt`, `deletedAt` (nullable, soft-delete gate).
-- [ ] All FK references include `onDelete` behavior (`cascade`, `set null`, or `restrict`).
+- [ ] New tables follow the standard shape: `id` (uuid, defaultRandom, PK [Primary Key]), `createdAt`, `updatedAt`, `deletedAt` (nullable, soft-delete gate).
+- [ ] All FK [Foreign Key] references include `onDelete` behavior (`cascade`, `set null`, or `restrict`).
 - [ ] All indexes are defined in the table's second argument callback array.
 - [ ] Unique constraints use `unique(...)`, case-insensitive email uniqueness uses `uniqueIndex(...).on(sql\`lower(${table.email})\`)`.
 - [ ] Multi-column unique constraints (e.g., `role_name_org_idx` on `(name, organizationId)`) are defined.
@@ -180,6 +180,8 @@ src/modules/<feature>/
 - [ ] New resource: add permission keys to `src/common/permissions.ts` (both `Permissions` const and `PermissionDescriptions` record).
 - [ ] New permissions: add seeder entry to `permission-seeder.service.ts`.
 - [ ] Policy class extends `BasePolicy<TTable>` with correct `table`, `resource`, `owner` options.
+- [ ] **Organization Isolation**: Policy classes for multi-tenant resources MUST override `readOverride`, `updateOverride`, and `deleteOverride` to compare `user.organizationId` against the resource's `organizationId` (do NOT rely on `BasePolicy` defaults which compare against `user.id`).
+- [ ] **Super Admin Bypass**: Inside override functions, use `if (this.hasAll(user, 'action')) return andAll(TRUE, ...extra);` to allow super admin type users to bypass tenant restrictions.
 - [ ] Owner-scoped read: override `readExtra()` if additional OR scopes exist (e.g., ticket quotation).
 - [ ] Admin bypass: `resource.action.all` covers any scoped `resource.action` automatically.
 - [ ] `isAdmin` flag on roles: used in `getAdmin()` — the org owner role. Never create a second admin role.

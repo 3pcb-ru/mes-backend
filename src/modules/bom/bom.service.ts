@@ -1,28 +1,42 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 
+import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { DrizzleService } from '@/models/model.service';
 import * as Schema from '@/models/schema';
-import { CreateRevisionDto } from './dto/create-revision.dto';
+import { JwtUser } from '@/types/jwt.types';
+
+import { BomMaterialPolicy, BomPolicy } from './bom.policy';
 import { CreateMaterialDto } from './dto/create-material.dto';
+import { CreateRevisionDto } from './dto/create-revision.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 
 @Injectable()
 export class BomService {
-    private db;
+    private readonly policy = new BomPolicy();
+    private readonly materialPolicy = new BomMaterialPolicy();
 
-    constructor(private readonly drizzle: DrizzleService) {
-        this.db = this.drizzle.database;
+    constructor(
+        private readonly drizzle: DrizzleService,
+        private readonly logger: CustomLoggerService,
+    ) {
+        this.logger.setContext(BomService.name);
+    }
+
+    private get db() {
+        return this.drizzle.database;
     }
 
     // --- REVISIONS ---
 
-    async getRevisions(productId: string) {
+    async getRevisions(productId: string, user: JwtUser) {
+        const policyWhere = await this.policy.read(user, eq(Schema.bomRevision.productId, productId), isNull(Schema.bomRevision.deletedAt));
         return await this.db.query.bomRevision.findMany({
-            where: eq(Schema.bomRevision.productId, productId),
+            where: policyWhere,
             orderBy: [desc(Schema.bomRevision.version)],
             with: {
                 materials: {
+                    where: isNull(Schema.bomMaterial.deletedAt),
                     with: {
                         item: true,
                     },
@@ -33,9 +47,21 @@ export class BomService {
         });
     }
 
-    async createRevision(productId: string, dto: CreateRevisionDto, _userId: string) {
+    async createRevision(productId: string, dto: CreateRevisionDto, user: JwtUser) {
+        // Verify product access and get organizationId
+        const [product] = await this.db
+            .select({ organizationId: Schema.product.organizationId })
+            .from(Schema.product)
+            .where(and(eq(Schema.product.id, productId), isNull(Schema.product.deletedAt)))
+            .limit(1);
+
+        if (!product) throw new NotFoundException('Product not found');
+        if (user.organizationId && product.organizationId !== user.organizationId && !user.permissions?.includes('products.read.all')) {
+            throw new ForbiddenException('Cannot create revision for product in another organization');
+        }
+
         const latestRevision = await this.db.query.bomRevision.findFirst({
-            where: eq(Schema.bomRevision.productId, productId),
+            where: and(eq(Schema.bomRevision.productId, productId), isNull(Schema.bomRevision.deletedAt)),
             orderBy: [desc(Schema.bomRevision.version)],
         });
 
@@ -57,6 +83,7 @@ export class BomService {
             .insert(Schema.bomRevision)
             .values({
                 productId,
+                organizationId: product.organizationId,
                 version: nextVersion,
                 status: 'draft',
                 baseRevisionId: dto.baseRevisionId,
@@ -66,9 +93,15 @@ export class BomService {
         return newRevision;
     }
 
-    async createAlternative(productId: string, baseRevisionId: string, _userId: string) {
+    async createAlternative(productId: string, baseRevisionId: string, user: JwtUser) {
+        const policyWhere = await this.policy.read(
+            user,
+            eq(Schema.bomRevision.id, baseRevisionId),
+            eq(Schema.bomRevision.productId, productId),
+            isNull(Schema.bomRevision.deletedAt),
+        );
         const baseRev = await this.db.query.bomRevision.findFirst({
-            where: and(eq(Schema.bomRevision.id, baseRevisionId), eq(Schema.bomRevision.productId, productId)),
+            where: policyWhere,
         });
 
         if (!baseRev) throw new NotFoundException('Base revision not found');
@@ -88,6 +121,7 @@ export class BomService {
                 .insert(Schema.bomRevision)
                 .values({
                     productId,
+                    organizationId: baseRev.organizationId,
                     version: nextVersion,
                     status: 'draft',
                     baseRevisionId,
@@ -96,13 +130,14 @@ export class BomService {
 
             // Copy materials from base revision
             const baseMaterials = await tx.query.bomMaterial.findMany({
-                where: eq(Schema.bomMaterial.bomRevisionId, baseRevisionId),
+                where: and(eq(Schema.bomMaterial.bomRevisionId, baseRevisionId), isNull(Schema.bomMaterial.deletedAt)),
             });
 
             if (baseMaterials.length > 0) {
                 await tx.insert(Schema.bomMaterial).values(
                     baseMaterials.map((m) => ({
                         bomRevisionId: newRevision.id,
+                        organizationId: m.organizationId,
                         itemId: m.itemId,
                         designators: m.designators,
                         alternatives: m.alternatives,
@@ -116,15 +151,17 @@ export class BomService {
         });
     }
 
-    async updateRevision(productId: string, revisionId: string, version: string) {
-        const _rev = await this.ensureDraft(revisionId);
-        const [updated] = await this.db.update(Schema.bomRevision).set({ version, updatedAt: new Date() }).where(eq(Schema.bomRevision.id, revisionId)).returning();
+    async updateRevision(productId: string, revisionId: string, version: string, user: JwtUser) {
+        const _rev = await this.ensureDraft(revisionId, user);
+        const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
+        const [updated] = await this.db.update(Schema.bomRevision).set({ version, updatedAt: new Date() }).where(policyWhere).returning();
         return updated;
     }
 
-    async deleteRevision(productId: string, revisionId: string) {
+    async deleteRevision(productId: string, revisionId: string, user: JwtUser) {
+        const policyWhere = await this.policy.delete(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
         const rev = await this.db.query.bomRevision.findFirst({
-            where: eq(Schema.bomRevision.id, revisionId),
+            where: policyWhere,
         });
 
         if (!rev) throw new NotFoundException('Revision not found');
@@ -132,27 +169,29 @@ export class BomService {
             throw new BadRequestException('Cannot delete active or approved revision');
         }
 
-        await this.db.delete(Schema.bomRevision).where(eq(Schema.bomRevision.id, revisionId));
+        await this.db.update(Schema.bomRevision).set({ deletedAt: new Date(), updatedAt: new Date() }).where(policyWhere);
         return { message: 'Revision deleted' };
     }
 
-    async submitRevision(revisionId: string, userId: string) {
-        const _rev = await this.ensureDraft(revisionId);
+    async submitRevision(revisionId: string, user: JwtUser) {
+        const _rev = await this.ensureDraft(revisionId, user);
+        const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
         await this.db
             .update(Schema.bomRevision)
             .set({
                 status: 'submitted',
-                submittedById: userId,
+                submittedById: user.id,
                 submitDate: new Date(),
                 updatedAt: new Date(),
             })
-            .where(eq(Schema.bomRevision.id, revisionId));
+            .where(policyWhere);
         return { message: 'Revision submitted' };
     }
 
-    async approveRevision(revisionId: string, userId: string) {
+    async approveRevision(revisionId: string, user: JwtUser) {
+        const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
         const rev = await this.db.query.bomRevision.findFirst({
-            where: eq(Schema.bomRevision.id, revisionId),
+            where: policyWhere,
         });
 
         if (!rev) throw new NotFoundException('Revision not found');
@@ -164,17 +203,18 @@ export class BomService {
             .update(Schema.bomRevision)
             .set({
                 status: 'approved',
-                approvedById: userId,
+                approvedById: user.id,
                 approveDate: new Date(),
                 updatedAt: new Date(),
             })
-            .where(eq(Schema.bomRevision.id, revisionId));
+            .where(policyWhere);
         return { message: 'Revision approved' };
     }
 
-    async activateRevision(revisionId: string) {
+    async activateRevision(revisionId: string, user: JwtUser) {
+        const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
         const rev = await this.db.query.bomRevision.findFirst({
-            where: eq(Schema.bomRevision.id, revisionId),
+            where: policyWhere,
         });
 
         if (!rev) throw new NotFoundException('Revision not found');
@@ -182,27 +222,31 @@ export class BomService {
             throw new BadRequestException('Only approved revisions can be activated');
         }
 
-        await this.db.update(Schema.bomRevision).set({ status: 'active', updatedAt: new Date() }).where(eq(Schema.bomRevision.id, revisionId));
+        await this.db.update(Schema.bomRevision).set({ status: 'active', updatedAt: new Date() }).where(policyWhere);
         return { message: 'Revision activated' };
     }
 
     // --- MATERIALS ---
 
-    async getMaterials(revisionId: string) {
+    async getMaterials(revisionId: string, user: JwtUser) {
+        const policyWhere = await this.materialPolicy.read(user, eq(Schema.bomMaterial.bomRevisionId, revisionId), isNull(Schema.bomMaterial.deletedAt));
         return await this.db.query.bomMaterial.findMany({
-            where: eq(Schema.bomMaterial.bomRevisionId, revisionId),
+            where: policyWhere,
             with: {
                 item: true,
             },
         });
     }
 
-    async addMaterial(revisionId: string, dto: CreateMaterialDto) {
-        await this.ensureDraft(revisionId);
+    async addMaterial(revisionId: string, dto: CreateMaterialDto, user: JwtUser) {
+        const rev = await this.ensureDraft(revisionId, user);
+        await this.materialPolicy.canWrite(user);
+
         const [m] = await this.db
             .insert(Schema.bomMaterial)
             .values({
                 bomRevisionId: revisionId,
+                organizationId: rev.organizationId,
                 ...dto,
                 quantity: dto.quantity.toString(),
             })
@@ -210,8 +254,14 @@ export class BomService {
         return m;
     }
 
-    async updateMaterial(revisionId: string, materialId: string, dto: UpdateMaterialDto) {
-        await this.ensureDraft(revisionId);
+    async updateMaterial(revisionId: string, materialId: string, dto: UpdateMaterialDto, user: JwtUser) {
+        await this.ensureDraft(revisionId, user);
+        const policyWhere = await this.materialPolicy.update(
+            user,
+            eq(Schema.bomMaterial.id, materialId),
+            eq(Schema.bomMaterial.bomRevisionId, revisionId),
+            isNull(Schema.bomMaterial.deletedAt),
+        );
         const [m] = await this.db
             .update(Schema.bomMaterial)
             .set({
@@ -219,16 +269,22 @@ export class BomService {
                 quantity: dto.quantity?.toString(),
                 updatedAt: new Date(),
             })
-            .where(and(eq(Schema.bomMaterial.id, materialId), eq(Schema.bomMaterial.bomRevisionId, revisionId)))
+            .where(policyWhere)
             .returning();
 
         if (!m) throw new NotFoundException('Material not found for this revision');
         return m;
     }
 
-    async deleteMaterial(revisionId: string, materialId: string) {
-        await this.ensureDraft(revisionId);
-        const [m] = await this.db.delete(Schema.bomMaterial).where(and(eq(Schema.bomMaterial.id, materialId), eq(Schema.bomMaterial.bomRevisionId, revisionId))).returning();
+    async deleteMaterial(revisionId: string, materialId: string, user: JwtUser) {
+        await this.ensureDraft(revisionId, user);
+        const policyWhere = await this.materialPolicy.delete(
+            user,
+            eq(Schema.bomMaterial.id, materialId),
+            eq(Schema.bomMaterial.bomRevisionId, revisionId),
+            isNull(Schema.bomMaterial.deletedAt),
+        );
+        const [m] = await this.db.update(Schema.bomMaterial).set({ deletedAt: new Date(), updatedAt: new Date() }).where(policyWhere).returning();
 
         if (!m) throw new NotFoundException('Material not found for this revision');
         return { message: 'Material removed' };
@@ -236,9 +292,10 @@ export class BomService {
 
     // --- HELPERS ---
 
-    private async ensureDraft(revisionId: string) {
+    private async ensureDraft(revisionId: string, user: JwtUser) {
+        const policyWhere = await this.policy.read(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
         const rev = await this.db.query.bomRevision.findFirst({
-            where: eq(Schema.bomRevision.id, revisionId),
+            where: policyWhere,
         });
 
         if (!rev) throw new NotFoundException('Revision not found');

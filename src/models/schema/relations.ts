@@ -8,6 +8,9 @@ import { product } from './product.schema';
 import { rolePermissions, roles } from './roles.schema';
 import { user } from './users.schema';
 import { workOrder } from './work-order.schema';
+import { nodes } from './nodes.schema';
+import { executionJobs } from './execution.schema';
+import { activityLogs } from './traceability.schema';
 
 // Organization Relations
 export const organizationRelations = relations(organization, ({ many }) => ({
@@ -95,5 +98,37 @@ export const rolePermissionsRelations = relations(rolePermissions, ({ one }) => 
     permission: one(permissions, {
         fields: [rolePermissions.permissionId],
         references: [permissions.id],
+    }),
+}));
+
+// Execution Relations
+export const executionJobsRelations = relations(executionJobs, ({ one }) => ({
+    workOrder: one(workOrder, {
+        fields: [executionJobs.workOrderId],
+        references: [workOrder.id],
+    }),
+    node: one(nodes, {
+        fields: [executionJobs.nodeId],
+        references: [nodes.id],
+    }),
+}));
+
+// Traceability Relations
+export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
+    organization: one(organization, {
+        fields: [activityLogs.organizationId],
+        references: [organization.id],
+    }),
+    user: one(user, {
+        fields: [activityLogs.userId],
+        references: [user.id],
+    }),
+    job: one(executionJobs, {
+        fields: [activityLogs.jobId],
+        references: [executionJobs.id],
+    }),
+    node: one(nodes, {
+        fields: [activityLogs.nodeId],
+        references: [nodes.id],
     }),
 }));

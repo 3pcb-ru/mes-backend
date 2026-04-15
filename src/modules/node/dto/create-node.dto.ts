@@ -1,8 +1,9 @@
-import { createZodDto } from 'nestjs-zod';
 import { z } from 'zod';
+import { nameRegex, validateText } from '@/common/helpers/validations';
+import { createStrictZodDto } from '@/common/helpers/zod-strict';
 
 const createNodeSchema = z.object({
-    name: z.string().min(1, 'Name is required'),
+    name: validateText({ regex: nameRegex, min: 1 }),
     definitionId: z
         .uuid('Invalid definition UUID')
         .optional()
@@ -17,4 +18,4 @@ const createNodeSchema = z.object({
     userId: z.uuid({ version: 'v4' }).optional(),
 });
 
-export class CreateNodeDto extends createZodDto(createNodeSchema) {}
+export class CreateNodeDto extends createStrictZodDto(createNodeSchema) {}
