@@ -80,31 +80,33 @@ export class WorkOrderService extends BaseFilterableService {
     }
 
     async releaseWorkOrder(workOrderId: string, user: JwtUser) {
-        const policyWhere = await this.policy.update(user, eq(Schema.workOrder.id, workOrderId), isNull(Schema.workOrder.deletedAt));
-        const wo = await this.db.query.workOrder.findFirst({
-            where: policyWhere,
+        return await this.db.transaction(async (tx) => {
+            const policyWhere = await this.policy.update(user, eq(Schema.workOrder.id, workOrderId), isNull(Schema.workOrder.deletedAt));
+
+            const [wo] = await (tx.select().from(Schema.workOrder).where(policyWhere).limit(1) as any).forUpdate();
+
+            if (!wo) throw new NotFoundException('Work Order not found');
+
+            if (wo.status !== 'draft') {
+                throw new BadRequestException('Work order is not in draft status');
+            }
+
+            const [updated] = await tx.update(Schema.workOrder).set({ status: 'released', updatedAt: new Date() }).where(policyWhere).returning();
+
+            await this.traceability.recordChange(
+                {
+                    entityType: 'work_order',
+                    entityId: wo.id,
+                    action: 'UPDATE',
+                    oldData: wo,
+                    newData: updated,
+                },
+                user,
+                tx,
+            );
+
+            return { message: 'Work order released' };
         });
-
-        if (!wo) throw new NotFoundException('Work Order not found');
-
-        if (wo.status !== 'draft') {
-            throw new BadRequestException('Work order is not in draft status');
-        }
-
-        const [updated] = await this.db.update(Schema.workOrder).set({ status: 'released', updatedAt: new Date() }).where(policyWhere).returning();
-
-        await this.traceability.recordChange(
-            {
-                entityType: 'work_order',
-                entityId: wo.id,
-                action: 'UPDATE',
-                oldData: wo,
-                newData: updated,
-            },
-            user,
-        );
-
-        return { message: 'Work order released' };
     }
 
     async listWorkOrders(query: ListWorkOrdersQueryDto, user: JwtUser) {

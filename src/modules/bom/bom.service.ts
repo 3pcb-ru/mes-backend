@@ -187,141 +187,154 @@ export class BomService extends BaseFilterableService {
     }
 
     async updateRevision(productId: string, revisionId: string, version: string, user: JwtUser) {
-        await this.ensureDraft(revisionId, user);
-        const existing = await this.db.query.bomRevision.findFirst({ where: eq(Schema.bomRevision.id, revisionId) });
-        const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
-        const [updated] = await this.db.update(Schema.bomRevision).set({ version, updatedAt: new Date() }).where(policyWhere).returning();
+        return await this.db.transaction(async (tx) => {
+            const existing = await this.ensureDraft(revisionId, user, tx);
+            const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
 
-        await this.traceability.recordChange(
-            {
-                entityType: 'bom_revision',
-                entityId: updated.id,
-                action: 'UPDATE',
-                oldData: existing,
-                newData: updated,
-            },
-            user,
-        );
+            const [updated] = await tx.update(Schema.bomRevision).set({ version, updatedAt: new Date() }).where(policyWhere).returning();
 
-        return updated;
+            await this.traceability.recordChange(
+                {
+                    entityType: 'bom_revision',
+                    entityId: updated.id,
+                    action: 'UPDATE',
+                    oldData: existing,
+                    newData: updated,
+                },
+                user,
+                tx,
+            );
+
+            return updated;
+        });
     }
 
     async deleteRevision(productId: string, revisionId: string, user: JwtUser) {
-        const policyWhere = await this.policy.delete(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
-        const rev = await this.db.query.bomRevision.findFirst({
-            where: policyWhere,
+        return await this.db.transaction(async (tx) => {
+            const policyWhere = await this.policy.delete(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
+
+            const [rev] = await (tx.select().from(Schema.bomRevision).where(policyWhere).limit(1) as any).forUpdate();
+
+            if (!rev) throw new NotFoundException('Revision not found');
+            if (rev.status === 'active' || rev.status === 'approved') {
+                throw new BadRequestException('Cannot delete active or approved revision');
+            }
+
+            const [updated] = await tx.update(Schema.bomRevision).set({ deletedAt: new Date(), updatedAt: new Date() }).where(policyWhere).returning();
+
+            await this.traceability.recordChange(
+                {
+                    entityType: 'bom_revision',
+                    entityId: rev.id,
+                    action: 'DELETE',
+                    oldData: rev,
+                    newData: updated,
+                },
+                user,
+                tx,
+            );
+
+            return { message: 'Revision deleted' };
         });
-
-        if (!rev) throw new NotFoundException('Revision not found');
-        if (rev.status === 'active' || rev.status === 'approved') {
-            throw new BadRequestException('Cannot delete active or approved revision');
-        }
-
-        const [updated] = await this.db.update(Schema.bomRevision).set({ deletedAt: new Date(), updatedAt: new Date() }).where(policyWhere).returning();
-
-        await this.traceability.recordChange(
-            {
-                entityType: 'bom_revision',
-                entityId: rev.id,
-                action: 'DELETE',
-                oldData: rev,
-                newData: updated,
-            },
-            user,
-        );
-
-        return { message: 'Revision deleted' };
     }
 
     async submitRevision(revisionId: string, user: JwtUser) {
-        const existing = await this.ensureDraft(revisionId, user);
-        const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
-        const [updated] = await this.db
-            .update(Schema.bomRevision)
-            .set({
-                status: 'submitted',
-                submittedById: user.id,
-                submitDate: new Date(),
-                updatedAt: new Date(),
-            })
-            .where(policyWhere)
-            .returning();
+        return await this.db.transaction(async (tx) => {
+            const existing = await this.ensureDraft(revisionId, user, tx);
+            const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
 
-        await this.traceability.recordChange(
-            {
-                entityType: 'bom_revision',
-                entityId: updated.id,
-                action: 'UPDATE',
-                oldData: existing,
-                newData: updated,
-            },
-            user,
-        );
+            const [updated] = await tx
+                .update(Schema.bomRevision)
+                .set({
+                    status: 'submitted',
+                    submittedById: user.id,
+                    submitDate: new Date(),
+                    updatedAt: new Date(),
+                })
+                .where(policyWhere)
+                .returning();
 
-        return { message: 'Revision submitted' };
+            await this.traceability.recordChange(
+                {
+                    entityType: 'bom_revision',
+                    entityId: updated.id,
+                    action: 'UPDATE',
+                    oldData: existing,
+                    newData: updated,
+                },
+                user,
+                tx,
+            );
+
+            return { message: 'Revision submitted' };
+        });
     }
 
     async approveRevision(revisionId: string, user: JwtUser) {
-        const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
-        const rev = await this.db.query.bomRevision.findFirst({
-            where: policyWhere,
+        return await this.db.transaction(async (tx) => {
+            const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
+
+            const [rev] = await (tx.select().from(Schema.bomRevision).where(policyWhere).limit(1) as any).forUpdate();
+
+            if (!rev) throw new NotFoundException('Revision not found');
+            if (rev.status !== 'submitted') {
+                throw new BadRequestException('Only submitted revisions can be approved');
+            }
+
+            const [updated] = await tx
+                .update(Schema.bomRevision)
+                .set({
+                    status: 'approved',
+                    approvedById: user.id,
+                    approveDate: new Date(),
+                    updatedAt: new Date(),
+                })
+                .where(policyWhere)
+                .returning();
+
+            await this.traceability.recordChange(
+                {
+                    entityType: 'bom_revision',
+                    entityId: updated.id,
+                    action: 'UPDATE',
+                    oldData: rev,
+                    newData: updated,
+                },
+                user,
+                tx,
+            );
+
+            return { message: 'Revision approved' };
         });
-
-        if (!rev) throw new NotFoundException('Revision not found');
-        if (rev.status !== 'submitted') {
-            throw new BadRequestException('Only submitted revisions can be approved');
-        }
-
-        const [updated] = await this.db
-            .update(Schema.bomRevision)
-            .set({
-                status: 'approved',
-                approvedById: user.id,
-                approveDate: new Date(),
-                updatedAt: new Date(),
-            })
-            .where(policyWhere)
-            .returning();
-
-        await this.traceability.recordChange(
-            {
-                entityType: 'bom_revision',
-                entityId: updated.id,
-                action: 'UPDATE',
-                oldData: rev,
-                newData: updated,
-            },
-            user,
-        );
-
-        return { message: 'Revision approved' };
     }
 
     async activateRevision(revisionId: string, user: JwtUser) {
-        const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
-        const rev = await this.db.query.bomRevision.findFirst({
-            where: policyWhere,
+        return await this.db.transaction(async (tx) => {
+            const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
+
+            const [rev] = await (tx.select().from(Schema.bomRevision).where(policyWhere).limit(1) as any).forUpdate();
+
+            if (!rev) throw new NotFoundException('Revision not found');
+            if (rev.status !== 'approved') {
+                throw new BadRequestException('Only approved revisions can be activated');
+            }
+
+            const [updated] = await tx.update(Schema.bomRevision).set({ status: 'active', updatedAt: new Date() }).where(policyWhere).returning();
+
+            await this.traceability.recordChange(
+                {
+                    entityType: 'bom_revision',
+                    entityId: updated.id,
+                    action: 'UPDATE',
+                    oldData: rev,
+                    newData: updated,
+                },
+                user,
+                tx,
+            );
+
+            return { message: 'Revision activated' };
         });
-
-        if (!rev) throw new NotFoundException('Revision not found');
-        if (rev.status !== 'approved') {
-            throw new BadRequestException('Only approved revisions can be activated');
-        }
-
-        const [updated] = await this.db.update(Schema.bomRevision).set({ status: 'active', updatedAt: new Date() }).where(policyWhere).returning();
-
-        await this.traceability.recordChange(
-            {
-                entityType: 'bom_revision',
-                entityId: updated.id,
-                action: 'UPDATE',
-                oldData: rev,
-                newData: updated,
-            },
-            user,
-        );
-
-        return { message: 'Revision activated' };
     }
 
     // --- MATERIALS ---
@@ -342,105 +355,119 @@ export class BomService extends BaseFilterableService {
     }
 
     async addMaterial(revisionId: string, dto: CreateMaterialDto, user: JwtUser) {
-        const rev = await this.ensureDraft(revisionId, user);
-        await this.materialPolicy.canWrite(user);
+        return await this.db.transaction(async (tx) => {
+            const rev = await this.ensureDraft(revisionId, user, tx);
+            await this.materialPolicy.canWrite(user);
 
-        const [m] = await this.db
-            .insert(Schema.bomMaterial)
-            .values({
-                bomRevisionId: revisionId,
-                organizationId: rev.organizationId,
-                ...dto,
-                quantity: dto.quantity.toString(),
-            })
-            .returning();
+            const [m] = await tx
+                .insert(Schema.bomMaterial)
+                .values({
+                    bomRevisionId: revisionId,
+                    organizationId: rev.organizationId,
+                    ...dto,
+                    quantity: dto.quantity.toString(),
+                })
+                .returning();
 
-        await this.traceability.recordChange(
-            {
-                entityType: 'bom_material',
-                entityId: m.id,
-                action: 'INSERT',
-                newData: m,
-            },
-            user,
-        );
+            await this.traceability.recordChange(
+                {
+                    entityType: 'bom_material',
+                    entityId: m.id,
+                    action: 'INSERT',
+                    newData: m,
+                },
+                user,
+                tx,
+            );
 
-        return m;
+            return m;
+        });
     }
 
     async updateMaterial(revisionId: string, materialId: string, dto: UpdateMaterialDto, user: JwtUser) {
-        await this.ensureDraft(revisionId, user);
-        const policyWhere = await this.materialPolicy.update(
-            user,
-            eq(Schema.bomMaterial.id, materialId),
-            eq(Schema.bomMaterial.bomRevisionId, revisionId),
-            isNull(Schema.bomMaterial.deletedAt),
-        );
+        return await this.db.transaction(async (tx) => {
+            await this.ensureDraft(revisionId, user, tx);
+            const policyWhere = await this.materialPolicy.update(
+                user,
+                eq(Schema.bomMaterial.id, materialId),
+                eq(Schema.bomMaterial.bomRevisionId, revisionId),
+                isNull(Schema.bomMaterial.deletedAt),
+            );
 
-        const existing = await this.db.query.bomMaterial.findFirst({ where: eq(Schema.bomMaterial.id, materialId) });
+            const existing = await tx.query.bomMaterial.findFirst({ where: eq(Schema.bomMaterial.id, materialId) });
 
-        const [m] = await this.db
-            .update(Schema.bomMaterial)
-            .set({
-                ...dto,
-                quantity: dto.quantity?.toString(),
-                updatedAt: new Date(),
-            })
-            .where(policyWhere)
-            .returning();
+            const [m] = await tx
+                .update(Schema.bomMaterial)
+                .set({
+                    ...dto,
+                    quantity: dto.quantity?.toString(),
+                    updatedAt: new Date(),
+                })
+                .where(policyWhere)
+                .returning();
 
-        if (!m) throw new NotFoundException('Material not found for this revision');
+            if (!m) throw new NotFoundException('Material not found for this revision');
 
-        await this.traceability.recordChange(
-            {
-                entityType: 'bom_material',
-                entityId: m.id,
-                action: 'UPDATE',
-                oldData: existing,
-                newData: m,
-            },
-            user,
-        );
+            await this.traceability.recordChange(
+                {
+                    entityType: 'bom_material',
+                    entityId: m.id,
+                    action: 'UPDATE',
+                    oldData: existing,
+                    newData: m,
+                },
+                user,
+                tx,
+            );
 
-        return m;
+            return m;
+        });
     }
 
     async deleteMaterial(revisionId: string, materialId: string, user: JwtUser) {
-        await this.ensureDraft(revisionId, user);
-        const policyWhere = await this.materialPolicy.delete(
-            user,
-            eq(Schema.bomMaterial.id, materialId),
-            eq(Schema.bomMaterial.bomRevisionId, revisionId),
-            isNull(Schema.bomMaterial.deletedAt),
-        );
+        return await this.db.transaction(async (tx) => {
+            await this.ensureDraft(revisionId, user, tx);
+            const policyWhere = await this.materialPolicy.delete(
+                user,
+                eq(Schema.bomMaterial.id, materialId),
+                eq(Schema.bomMaterial.bomRevisionId, revisionId),
+                isNull(Schema.bomMaterial.deletedAt),
+            );
 
-        const existing = await this.db.query.bomMaterial.findFirst({ where: eq(Schema.bomMaterial.id, materialId) });
+            const existing = await tx.query.bomMaterial.findFirst({ where: eq(Schema.bomMaterial.id, materialId) });
 
-        const [m] = await this.db.update(Schema.bomMaterial).set({ deletedAt: new Date(), updatedAt: new Date() }).where(policyWhere).returning();
+            const [m] = await tx.update(Schema.bomMaterial).set({ deletedAt: new Date(), updatedAt: new Date() }).where(policyWhere).returning();
 
-        if (!m) throw new NotFoundException('Material not found for this revision');
+            if (!m) throw new NotFoundException('Material not found for this revision');
 
-        await this.traceability.recordChange(
-            {
-                entityType: 'bom_material',
-                entityId: m.id,
-                action: 'DELETE',
-                oldData: existing,
-                newData: m,
-            },
-            user,
-        );
+            await this.traceability.recordChange(
+                {
+                    entityType: 'bom_material',
+                    entityId: m.id,
+                    action: 'DELETE',
+                    oldData: existing,
+                    newData: m,
+                },
+                user,
+                tx,
+            );
 
-        return { message: 'Material removed' };
+            return { message: 'Material removed' };
+        });
     }
 
     // --- HELPERS ---
 
-    private async ensureDraft(revisionId: string, user: JwtUser) {
+    private async ensureDraft(revisionId: string, user: JwtUser, tx?: any) {
+        const db = tx || this.db;
         const policyWhere = await this.policy.read(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
-        const rev = await this.db.query.bomRevision.findFirst({
-            where: policyWhere,
-        });
+
+        let qb = db.select().from(Schema.bomRevision).where(policyWhere).limit(1);
+        if (tx) {
+            qb = (qb as any).forUpdate();
+        }
+
+        const [rev] = await qb;
 
         if (!rev) throw new NotFoundException('Revision not found');
         if (rev.status !== 'draft') {

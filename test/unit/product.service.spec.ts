@@ -1,5 +1,5 @@
-import { DrizzleService } from '@/models/model.service';
-import { ProductService } from '@/modules/product/product.service';
+import { DrizzleService } from '../../src/models/model.service';
+import { ProductService } from '../../src/modules/product/product.service';
 
 describe('ProductService (unit)', () => {
     let svc: ProductService;
@@ -19,13 +19,18 @@ describe('ProductService (unit)', () => {
                 },
             },
         };
-        svc = new ProductService(mockDrizzle as unknown as DrizzleService);
+        const mockLogger = { setContext: jest.fn(), log: jest.fn(), error: jest.fn() } as any;
+        const mockPolicy = { read: jest.fn(), update: jest.fn(), delete: jest.fn() } as any;
+        const mockTraceability = { recordChange: jest.fn() } as any;
+        const mockFilterService = { handle: jest.fn() } as any;
+
+        svc = new ProductService(mockDrizzle as unknown as DrizzleService, mockLogger, mockPolicy, mockTraceability, mockFilterService);
     });
 
     it('creates and finds product', async () => {
-        const p = await svc.create({ sku: 'SKU1', name: 'Prod 1' }, 'factory-id');
+        const p = await svc.create({ sku: 'SKU1', name: 'Prod 1' }, { id: 'user-id', organizationId: 'factory-id' } as any);
         expect(p).toHaveProperty('id');
-        const found = await svc.findOne(p.id);
+        const found = await svc.findOne(p.id, { id: 'user-id', organizationId: 'factory-id' } as any);
         expect(found.sku).toBe('SKU1');
     });
 });

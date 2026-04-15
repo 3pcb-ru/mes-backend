@@ -139,7 +139,7 @@ export class NodeService extends BaseFilterableService {
     async changeStatus(id: string, status: string, reason: string, user: JwtUser) {
         return await this.db.transaction(async (tx) => {
             const policyWhere = await this.policy.update(user, eq(Schema.nodes.id, id), isNull(Schema.nodes.deletedAt));
-            const [node] = await tx.select().from(Schema.nodes).where(policyWhere).limit(1);
+            const [node] = await ((tx.select().from(Schema.nodes).where(policyWhere).limit(1) as any).forUpdate());
             if (!node) {
                 throw new NotFoundException('Node not found');
             }

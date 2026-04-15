@@ -104,38 +104,45 @@ export class ProductService extends BaseFilterableService {
     }
 
     async delete(id: string, user: JwtUser) {
-        const readWhere = await this.policy.read(user, eq(product.id, id), isNull(product.deletedAt));
+        return await this.db.transaction(async (tx) => {
+            const readWhere = await this.policy.read(user, eq(product.id, id), isNull(product.deletedAt));
 
-        // Ensure user can read the product before checking active revisions
-        const existingProduct = await this.db.query.product.findFirst({
-            where: readWhere,
+            // Fetch product with lock
+            const [existingProduct] = await ((tx.select().from(product).where(readWhere).limit(1) as any).forUpdate());
+
+            if (!existingProduct) throw new NotFoundException('Product not found');
+
+            // Check for active revisions within same transaction
+            const activeRevision = await tx.query.bomRevision.findFirst({
+                where: and(eq(bomRevision.productId, id), eq(bomRevision.status, 'active')),
+            });
+
+            if (activeRevision) {
+                throw new BadRequestException('Cannot delete product with active revisions');
+            }
+
+            const deleteWhere = await this.policy.delete(user, eq(product.id, id), isNull(product.deletedAt));
+            const [p] = await tx
+                .update(product)
+                .set({ deletedAt: new Date(), updatedAt: new Date() })
+                .where(deleteWhere)
+                .returning();
+                
+            if (!p) throw new NotFoundException('Product not found');
+
+            await this.traceability.recordChange(
+                {
+                    entityType: 'product',
+                    entityId: p.id,
+                    action: 'DELETE',
+                    oldData: existingProduct,
+                    newData: p,
+                },
+                user,
+                tx,
+            );
+
+            return p;
         });
-
-        if (!existingProduct) throw new NotFoundException('Product not found');
-
-        const activeRevision = await this.db.query.bomRevision.findFirst({
-            where: and(eq(bomRevision.productId, id), eq(bomRevision.status, 'active')),
-        });
-
-        if (activeRevision) {
-            throw new BadRequestException('Cannot delete product with active revisions');
-        }
-
-        const deleteWhere = await this.policy.delete(user, eq(product.id, id), isNull(product.deletedAt));
-        const [p] = await this.db.update(product).set({ deletedAt: new Date(), updatedAt: new Date() }).where(deleteWhere).returning();
-        if (!p) throw new NotFoundException('Product not found');
-
-        await this.traceability.recordChange(
-            {
-                entityType: 'product',
-                entityId: p.id,
-                action: 'DELETE',
-                oldData: existingProduct,
-                newData: p,
-            },
-            user,
-        );
-
-        return p;
     }
 }

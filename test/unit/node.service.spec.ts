@@ -8,8 +8,10 @@ describe('NodeService (unit)', () => {
     beforeEach(() => {
         // Mocking the required DrizzleService and FilterService injected dependencies
         const mockDrizzleService = { database: {} } as unknown as DrizzleService;
+        const mockLogger = { setContext: jest.fn(), log: jest.fn(), error: jest.fn() } as any;
+        const mockTraceability = { recordChange: jest.fn() } as any;
         const mockFilterService = {} as unknown as FilterService;
-        svc = new NodeService(mockDrizzleService, mockFilterService);
+        svc = new NodeService(mockDrizzleService, mockLogger, mockTraceability, mockFilterService);
     });
 
     it('service compiles and initializes', () => {
