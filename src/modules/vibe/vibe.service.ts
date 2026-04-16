@@ -8,6 +8,7 @@ import { DrizzleService } from '@/models/model.service';
 import { user as userSchema } from '@/models/schema/users.schema';
 import { vibePages } from '@/models/schema/vibe-pages.schema';
 import { VibeProvider } from '@/modules/ai-core/vibe.provider';
+import { TraceabilityService } from '@/modules/traceability/traceability.service';
 import { JwtUser } from '@/types/jwt.types';
 import { TextUtils } from '@/utils/text.utils';
 
@@ -22,6 +23,7 @@ export class VibeService extends BaseFilterableService {
         private readonly vibeProvider: VibeProvider,
         private readonly policy: VibePolicy,
         private readonly mailService: MailService,
+        private readonly traceabilityService: TraceabilityService,
     ) {
         super(filterService);
     }
@@ -97,6 +99,18 @@ export class VibeService extends BaseFilterableService {
                 organizationId: user.organizationId!,
             })
             .returning();
+
+        // 4. Record Traceability
+        await this.traceabilityService.recordChange(
+            {
+                entityType: 'VibePage',
+                entityId: page.id,
+                action: 'INSERT',
+                newData: page,
+            },
+            user,
+        );
+
         return page;
     }
 
@@ -120,6 +134,18 @@ export class VibeService extends BaseFilterableService {
         }
 
         await this.db.delete(vibePages).where(eq(vibePages.id, id));
+
+        // Record Traceability
+        await this.traceabilityService.recordChange(
+            {
+                entityType: 'VibePage',
+                entityId: id,
+                action: 'DELETE',
+                oldData: page,
+            },
+            user,
+        );
+
         return { success: true };
     }
 }
