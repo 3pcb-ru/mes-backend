@@ -103,7 +103,15 @@ export const nameRegex = { pattern: NAME_PATTERN, error: 'name can only contain 
  * Project-standard ISO-8601 Date-Time validator using ZodString.
  * This is used to avoid Swagger crashes caused by ZodDate and deprecation warnings from z.string().datetime().
  */
-export const isoDateTime = z
-    .string()
-    .describe('ISO-8601 Date String')
-    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/, 'Invalid ISO-8601 date format');
+export const isoDateTime = z.preprocess(
+    (val) => {
+        if (val instanceof Date) {
+            return val.toISOString();
+        }
+        return val;
+    },
+    z
+        .string()
+        .describe('ISO-8601 Date String')
+        .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/, 'Invalid ISO-8601 date format'),
+);
