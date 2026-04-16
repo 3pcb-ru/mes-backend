@@ -1,5 +1,4 @@
 import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
-
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
@@ -13,8 +12,7 @@ import { UsersDecorators } from './users.decorators';
 import { InviteUserDto, UpdateUserProfileDto, UpdateUserStatusDto } from './users.dto';
 import { UsersService } from './users.service';
 
-
-@ApiTags('users')
+@ApiTags('Users')
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
@@ -88,4 +86,3 @@ export class UsersController {
         return ok(user).message('User deactivated successfully.');
     }
 }
-

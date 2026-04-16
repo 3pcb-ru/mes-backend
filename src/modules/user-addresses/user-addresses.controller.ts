@@ -1,19 +1,19 @@
-import { Controller, Delete, Get, Param, Patch, Post, Put, UseGuards, Request, Query, Body } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
-import { UserAddressesService } from './user-addresses.service';
-import { CreateUserAddressDto, ListAddressQueryDto, UpdateUserAddressDto } from './user-addresses.dto';
-import { ok } from '@/utils';
-import { UserAddressesDecorators } from './user-addresses.decorators';
-import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/user.decorator';
 import { JwtUser } from '@/types/jwt.types';
+import { ok } from '@/utils';
+
+import { UserAddressesDecorators } from './user-addresses.decorators';
+import { CreateUserAddressDto, ListAddressQueryDto, UpdateUserAddressDto } from './user-addresses.dto';
+import { UserAddressesService } from './user-addresses.service';
 
 @ApiTags('User Addresses')
 @ApiBearerAuth()
 @Controller('account/addresses')
 export class UserAddressesController {
-    constructor(private readonly service: UserAddressesService) { }
+    constructor(private readonly service: UserAddressesService) {}
 
     @Get()
     @UserAddressesDecorators('list')
