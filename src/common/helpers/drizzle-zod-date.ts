@@ -5,7 +5,26 @@ import { isoDateTime } from './validations';
  * Helper for input schemas that need to coerce date strings to Date objects
  */
 export function createTimestampInputOverrides(fieldNames: string[] = []) {
-    const defaultFields = ['createdAt', 'updatedAt', 'deletedAt', 'expiresAt', 'orderDate', 'lastMessageAt', 'completedAt', 'approvedAt', 'skippedAt', 'dueAt', 'startedAt'];
+    const defaultFields = [
+        'createdAt',
+        'updatedAt',
+        'deletedAt',
+        'expiresAt',
+        'orderDate',
+        'lastMessageAt',
+        'completedAt',
+        'approvedAt',
+        'skippedAt',
+        'dueAt',
+        'startedAt',
+        'plannedStart',
+        'readAt',
+        'urlExpiresAt',
+        'exposureStartTime',
+        'submitDate',
+        'approveDate',
+        'timestamp',
+    ];
     const allFields = [...defaultFields, ...fieldNames];
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,7 +45,26 @@ export function createTimestampInputOverrides(fieldNames: string[] = []) {
  */
 export function createTimestampPreprocessOverrides(fieldNames: string[] = []) {
     // Default timestamp fields to override
-    const defaultFields = ['createdAt', 'updatedAt', 'deletedAt', 'expiresAt', 'orderDate', 'lastMessageAt', 'completedAt', 'approvedAt', 'skippedAt', 'dueAt', 'startedAt'];
+    const defaultFields = [
+        'createdAt',
+        'updatedAt',
+        'deletedAt',
+        'expiresAt',
+        'orderDate',
+        'lastMessageAt',
+        'completedAt',
+        'approvedAt',
+        'skippedAt',
+        'dueAt',
+        'startedAt',
+        'plannedStart',
+        'readAt',
+        'urlExpiresAt',
+        'exposureStartTime',
+        'submitDate',
+        'approveDate',
+        'timestamp',
+    ];
     const allFields = [...defaultFields, ...fieldNames];
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
