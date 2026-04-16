@@ -69,7 +69,7 @@ export class OrganizationService {
             .update(Schema.organization)
             .set({
                 ...data,
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(eq(Schema.organization.id, organizationId))
             .returning({

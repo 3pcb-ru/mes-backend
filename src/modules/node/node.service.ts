@@ -115,7 +115,7 @@ export class NodeService extends BaseFilterableService {
             .update(Schema.nodes)
             .set({
                 ...payload,
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(policyWhere)
             .returning();
@@ -151,7 +151,7 @@ export class NodeService extends BaseFilterableService {
                 .update(Schema.nodes)
                 .set({
                     status,
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date(),
                 })
                 .where(eq(Schema.nodes.id, id))
                 .returning();
@@ -206,7 +206,7 @@ export class NodeService extends BaseFilterableService {
                 .set({
                     parentId: newParentId,
                     path: newPath,
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date(),
                 })
                 .where(policyWhere)
                 .returning();
@@ -281,7 +281,7 @@ export class NodeService extends BaseFilterableService {
                     .update(Schema.nodes)
                     .set({
                         deletedAt: new Date(),
-                        updatedAt: new Date().toISOString(),
+                        updatedAt: new Date(),
                     })
                     .where(policyWhere)
                     .returning();

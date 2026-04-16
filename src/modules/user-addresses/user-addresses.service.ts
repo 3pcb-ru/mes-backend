@@ -67,7 +67,7 @@ export class UserAddressesService {
         }
         const [row] = await this.db
             .update(userAddress)
-            .set({ ...data, updatedAt: new Date().toISOString() })
+            .set({ ...data, updatedAt: new Date() })
             .where(eq(userAddress.id, addressId))
             .returning();
         return row;
@@ -80,7 +80,7 @@ export class UserAddressesService {
         const [existing] = await this.db.select().from(userAddress).where(eq(userAddress.id, query.addressId)).limit(1);
         if (!existing || existing.userId !== query.userId) throw new NotFoundException('Address not found');
         await this.db.update(userAddress).set({ isDefault: false }).where(eq(userAddress.userId, query.userId));
-        const [row] = await this.db.update(userAddress).set({ isDefault: true, updatedAt: new Date().toISOString() }).where(eq(userAddress.id, query.addressId)).returning();
+        const [row] = await this.db.update(userAddress).set({ isDefault: true, updatedAt: new Date() }).where(eq(userAddress.id, query.addressId)).returning();
         return row;
     }
 

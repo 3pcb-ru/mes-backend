@@ -192,7 +192,7 @@ export class UsersService extends BaseFilterableService {
             .update(Schema.user)
             .set({
                 verificationToken,
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             })
             .where(eq(Schema.user.id, userId));
     }
@@ -214,7 +214,7 @@ export class UsersService extends BaseFilterableService {
             // Update only allowed fields with timestamp
             const updateData = {
                 ...data,
-                updatedAt: new Date().toISOString(),
+                updatedAt: new Date(),
             };
 
             const [updated] = await this.db.update(Schema.user).set(updateData).where(policyWhere).returning();
@@ -264,7 +264,7 @@ export class UsersService extends BaseFilterableService {
     async updateInternal(id: string, data: Partial<UserUpdateInput>): Promise<UserSelectOutput> {
         const updateData = {
             ...data,
-            updatedAt: new Date().toISOString(),
+            updatedAt: new Date(),
         };
 
         const [user] = await this.db.update(Schema.user).set(updateData).where(eq(Schema.user.id, id)).returning();

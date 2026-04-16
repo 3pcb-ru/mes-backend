@@ -31,8 +31,12 @@ export function createTimestampInputOverrides(fieldNames: string[] = []) {
     const overrides: Record<string, any> = {};
 
     for (const fieldName of allFields) {
-        // For inputs, coerce string to Date
-        overrides[fieldName] = isoDateTime.optional();
+        // For inputs, accept Date or ISO string and transform to Date
+        overrides[fieldName] = z
+            .union([z.date(), isoDateTime])
+            .optional()
+            .nullable()
+            .transform((val) => (val ? new Date(val) : val));
     }
 
     return overrides;

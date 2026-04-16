@@ -84,7 +84,7 @@ export class ProductService extends BaseFilterableService {
 
         const [p] = await this.db
             .update(product)
-            .set({ ...payload, updatedAt: new Date().toISOString() })
+            .set({ ...payload, updatedAt: new Date() })
             .where(policyWhere)
             .returning();
         if (!p) throw new NotFoundException('Product not found');
@@ -122,7 +122,7 @@ export class ProductService extends BaseFilterableService {
             }
 
             const deleteWhere = await this.policy.delete(user, eq(product.id, id), isNull(product.deletedAt));
-            const [p] = await tx.update(product).set({ deletedAt: new Date(), updatedAt: new Date().toISOString() }).where(deleteWhere).returning();
+            const [p] = await tx.update(product).set({ deletedAt: new Date(), updatedAt: new Date() }).where(deleteWhere).returning();
 
             if (!p) throw new NotFoundException('Product not found');
 

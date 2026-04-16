@@ -191,7 +191,7 @@ export class BomService extends BaseFilterableService {
             const existing = await this.ensureDraft(revisionId, user, tx);
             const policyWhere = await this.policy.update(user, eq(Schema.bomRevision.id, revisionId), isNull(Schema.bomRevision.deletedAt));
 
-            const [updated] = await tx.update(Schema.bomRevision).set({ version, updatedAt: new Date().toISOString() }).where(policyWhere).returning();
+            const [updated] = await tx.update(Schema.bomRevision).set({ version, updatedAt: new Date() }).where(policyWhere).returning();
 
             await this.traceability.recordChange(
                 {
@@ -220,7 +220,7 @@ export class BomService extends BaseFilterableService {
                 throw new BadRequestException('Cannot delete active or approved revision');
             }
 
-            const [updated] = await tx.update(Schema.bomRevision).set({ deletedAt: new Date(), updatedAt: new Date().toISOString() }).where(policyWhere).returning();
+            const [updated] = await tx.update(Schema.bomRevision).set({ deletedAt: new Date(), updatedAt: new Date() }).where(policyWhere).returning();
 
             await this.traceability.recordChange(
                 {
@@ -249,7 +249,7 @@ export class BomService extends BaseFilterableService {
                     status: 'submitted',
                     submittedById: user.id,
                     submitDate: new Date(),
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date(),
                 })
                 .where(policyWhere)
                 .returning();
@@ -287,7 +287,7 @@ export class BomService extends BaseFilterableService {
                     status: 'approved',
                     approvedById: user.id,
                     approveDate: new Date(),
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date(),
                 })
                 .where(policyWhere)
                 .returning();
@@ -319,7 +319,7 @@ export class BomService extends BaseFilterableService {
                 throw new BadRequestException('Only approved revisions can be activated');
             }
 
-            const [updated] = await tx.update(Schema.bomRevision).set({ status: 'active', updatedAt: new Date().toISOString() }).where(policyWhere).returning();
+            const [updated] = await tx.update(Schema.bomRevision).set({ status: 'active', updatedAt: new Date() }).where(policyWhere).returning();
 
             await this.traceability.recordChange(
                 {
@@ -401,7 +401,7 @@ export class BomService extends BaseFilterableService {
                 .set({
                     ...dto,
                     quantity: dto.quantity?.toString(),
-                    updatedAt: new Date().toISOString(),
+                    updatedAt: new Date(),
                 })
                 .where(policyWhere)
                 .returning();
@@ -436,7 +436,7 @@ export class BomService extends BaseFilterableService {
 
             const existing = await tx.query.bomMaterial.findFirst({ where: eq(Schema.bomMaterial.id, materialId) });
 
-            const [m] = await tx.update(Schema.bomMaterial).set({ deletedAt: new Date(), updatedAt: new Date().toISOString() }).where(policyWhere).returning();
+            const [m] = await tx.update(Schema.bomMaterial).set({ deletedAt: new Date(), updatedAt: new Date() }).where(policyWhere).returning();
 
             if (!m) throw new NotFoundException('Material not found for this revision');
 
