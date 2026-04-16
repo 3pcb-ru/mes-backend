@@ -12,6 +12,7 @@ import { API_CONFIG_TOKEN, IAppConfiguration } from '@/config';
 import {
     EMAIL_TEMPLATE,
     ISendAdminTicketNotification,
+    ISendAiAbuseMail,
     ISendInvitationMail,
     ISendMail,
     ISendOrderStatusMail,
@@ -330,6 +331,43 @@ export class MailService {
         } catch (error) {
             this.logger.error(`Failed to send invitation email to ${email}:`, error);
             throw new PreconditionFailedException('Failed to send invitation email');
+        }
+    }
+
+    public async sendAiAbuseNotification(data: ISendAiAbuseMail): Promise<void> {
+        const { email, name } = data;
+
+        try {
+            const configuration = this.configService.getOrThrow<IAppConfiguration>(API_CONFIG_TOKEN);
+
+            // 1. Send to user
+            const userHtml = this.fillTemplate(EMAIL_TEMPLATE.AI_ABUSE_USER, {
+                ...data,
+                baseUrl: configuration.client.url,
+                serverUrl: configuration.server.url,
+            });
+            await this.sendMail({
+                to: email,
+                subject: 'AI Agent Access Restricted - GRVT MES Security',
+                html: userHtml,
+            });
+
+            // 2. Send to admin (info@grvt.cc)
+            const adminHtml = this.fillTemplate(EMAIL_TEMPLATE.AI_ABUSE_ADMIN, {
+                ...data,
+                baseUrl: configuration.client.url,
+                serverUrl: configuration.server.url,
+            });
+            await this.sendMail({
+                to: 'info@grvt.cc',
+                subject: `🚨 Security Alert: AI Abuse Detected (${email})`,
+                html: adminHtml,
+            });
+
+            this.logger.log(`Abuse notification emails sent for user ${email}`);
+        } catch (error) {
+            this.logger.error(`Failed to send abuse notifications for ${email}:`, error);
+            // Non-blocking error for the main flow
         }
     }
 }

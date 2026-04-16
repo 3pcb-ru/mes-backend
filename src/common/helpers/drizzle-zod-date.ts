@@ -24,6 +24,7 @@ export function createTimestampInputOverrides(fieldNames: string[] = []) {
         'submitDate',
         'approveDate',
         'timestamp',
+        'vibeBlockedUntil',
     ];
     const allFields = [...defaultFields, ...fieldNames];
 
@@ -32,11 +33,10 @@ export function createTimestampInputOverrides(fieldNames: string[] = []) {
 
     for (const fieldName of allFields) {
         // For inputs, accept Date or ISO string and transform to Date
-        overrides[fieldName] = z
-            .union([z.date(), isoDateTime])
+        overrides[fieldName] = isoDateTime
             .optional()
             .nullable()
-            .transform((val) => (val ? new Date(val) : val));
+            .transform((val) => (val ? new Date(val as string | number | Date) : val));
     }
 
     return overrides;
@@ -68,6 +68,7 @@ export function createTimestampPreprocessOverrides(fieldNames: string[] = []) {
         'submitDate',
         'approveDate',
         'timestamp',
+        'vibeBlockedUntil',
     ];
     const allFields = [...defaultFields, ...fieldNames];
 

@@ -82,7 +82,6 @@ export interface ISendInvitationMail {
     invitationUrl: string;
 }
 
-
 /**
  * Email template enum
  * Maps service methods to their corresponding email templates
@@ -95,5 +94,17 @@ export enum EMAIL_TEMPLATE {
     ADMIN_TICKET_NOTIFICATION = 'admin-ticket-notification',
     ORDER_STATUS = 'order-status',
     INVITATION = 'user-invitation',
+    AI_ABUSE_USER = 'ai-abuse-user',
+    AI_ABUSE_ADMIN = 'ai-abuse-admin',
 }
 
+/**
+ * AI Abuse notification interface
+ */
+export interface ISendAiAbuseMail {
+    email: string;
+    name: string;
+    userId: string;
+    organizationId: string;
+    timestamp: string;
+}

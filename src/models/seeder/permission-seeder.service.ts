@@ -38,6 +38,8 @@ export class PermissionSeederService implements OnModuleInit {
                 Permissions.notifications.Delete,
                 Permissions.organizations.Create,
                 Permissions.organizations.Update,
+                Permissions.vibe.Read,
+                Permissions.vibe.Write,
             ],
         },
         Worker: {
@@ -113,6 +115,11 @@ export class PermissionSeederService implements OnModuleInit {
                 Permissions.notifications.Update,
                 Permissions.notifications.Delete,
                 Permissions.traceability.ReadAudit,
+                Permissions.vibe.Read,
+                Permissions.vibe.ReadAll,
+                Permissions.vibe.Write,
+                Permissions.vibe.Update,
+                Permissions.vibe.Delete,
             ],
         },
         Storekeeper: {

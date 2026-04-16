@@ -36,7 +36,7 @@ logs
 drizzle.*.config.ts
 
 # Environment Variables
-.env*
+.env
 .flaskenv*
 !.env.project
 !.env.vault

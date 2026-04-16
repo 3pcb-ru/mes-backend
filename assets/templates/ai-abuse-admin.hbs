@@ -1,0 +1,143 @@
+<html lang='en'>
+    <head>
+        <meta charset='UTF-8' />
+        <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+        <meta http-equiv='X-UA-Compatible' content='IE=edge' />
+        <meta name='format-detection' content='telephone=no' />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+        <title>Security Alert: AI Abuse - GRVT MES</title>
+        <style>
+            body, table, td, p, a, li, blockquote {
+                -webkit-text-size-adjust: 100%;
+                -ms-text-size-adjust: 100%;
+            }
+            table, td {
+                mso-table-lspace: 0pt;
+                mso-table-rspace: 0pt;
+            }
+            body {
+                margin: 0;
+                padding: 0;
+                background-color: #020617;
+                font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                color: #f8fafc;
+            }
+            .email-container {
+                width: 100%;
+                background-color: #020617;
+            }
+            .email-body {
+                max-width: 600px;
+                margin: 0 auto;
+                background-color: #0f172a;
+                border: 1px solid #ef4444;
+                border-radius: 12px;
+                overflow: hidden;
+            }
+            .alert-header {
+                background: #ef4444;
+                padding: 30px 20px;
+                text-align: center;
+                color: #ffffff;
+            }
+            .meta-box {
+                background-color: #1e293b;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                padding: 20px;
+                margin: 20px 0;
+            }
+            .meta-label {
+                font-size: 11px;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: #94a3b8;
+                font-weight: 700;
+                margin-bottom: 4px;
+            }
+            .meta-value {
+                font-size: 14px;
+                color: #f8fafc;
+                font-family: 'Courier New', monospace;
+                margin-bottom: 12px;
+            }
+            .status-badge {
+                display: inline-block;
+                padding: 4px 12px;
+                background: #ef4444;
+                color: #ffffff;
+                border-radius: 99px;
+                font-size: 10px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+            @media screen and (max-width: 600px) {
+                .email-body {
+                    border-radius: 0;
+                }
+            }
+        </style>
+    </head>
+    <body style="margin: 0; padding: 0;">
+        <table role='presentation' cellspacing='0' cellpadding='0' border='0' width='100%' class='email-container'>
+            <tr>
+                <td style='padding: 40px 20px;'>
+                    <table role='presentation' cellspacing='0' cellpadding='0' border='0' width='100%' class='email-body'>
+                        <!-- Header -->
+                        <tr>
+                            <td class="alert-header">
+                                <h2 style="margin: 0; font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px;">
+                                    🚨 Intrusion Alert
+                                </h2>
+                            </td>
+                        </tr>
+
+                        <!-- Content -->
+                        <tr>
+                            <td style='padding: 40px;'>
+                                <h1 style='margin: 0 0 20px 0; font-size: 24px; font-weight: 600; color: #ffffff;'>
+                                    AI Abuse Detected
+                                </h1>
+                                <p style='margin: 0 0 24px 0; font-size: 15px; color: #94a3b8; line-height: 1.6;'>
+                                    The security orchestrator has automatically locked a user account after exceeding the **20-violation threshold** for the AI Vibe Agent.
+                                </p>
+
+                                <div class="meta-box">
+                                    <div class="meta-label">Incident Target</div>
+                                    <div class="meta-value">{{email}}</div>
+
+                                    <div class="meta-label">User ID / Organization</div>
+                                    <div class="meta-value">{{userId}} / {{organizationId}}</div>
+
+                                    <div class="meta-label">Detection Timestamp</div>
+                                    <div class="meta-value">{{timestamp}}</div>
+
+                                    <div style="margin-top: 10px;">
+                                        <span class="status-badge">Permanent Lock Active</span>
+                                    </div>
+                                </div>
+
+                                <p style='margin: 24px 0 0 0; font-size: 14px; color: #64748b; font-style: italic; line-height: 1.5;'>
+                                    Action Required: Please review User ID <strong>{{userId}}</strong> activity logs in the traceability dashboard to assess intent.
+                                </p>
+                            </td>
+                        </tr>
+
+                        <!-- Footer -->
+                        <tr>
+                            <td style='background-color: rgba(0, 0, 0, 0.3); padding: 24px 40px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.05);'>
+                                <p style='margin: 0; font-size: 11px; color: #475569;'>
+                                    <strong>GRVT AI Security Layer v1.0</strong><br />
+                                    Automated Response Protocol
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>

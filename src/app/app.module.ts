@@ -11,13 +11,14 @@ import { databaseConfig, redisConfig, serverConfig } from '@/config';
 import { HealthModule } from '@/health/health.module';
 import { PermissionSeederService } from '@/models/seeder/permission-seeder.service';
 // Modules
+import { AiCoreModule } from '@/modules/ai-core/ai-core.module';
 import { AttachmentModule } from '@/modules/attachments/attachment.module';
 import { AuthModule } from '@/modules/auth/auth.module';
 import { BomModule } from '@/modules/bom/bom.module';
 import { ConnectivityModule } from '@/modules/connectivity/connectivity.module';
 import { ExecutionModule } from '@/modules/execution/execution.module';
-import { NodeModule } from '@/modules/node/node.module';
 import { JobsModule } from '@/modules/jobs/jobs.module';
+import { NodeModule } from '@/modules/node/node.module';
 import { NotificationModule } from '@/modules/notifications/notification.module';
 import { OrganizationModule } from '@/modules/organization/organization.module';
 import { ProductModule } from '@/modules/product/product.module';
@@ -26,6 +27,7 @@ import { TicketModule } from '@/modules/ticket/ticket.module';
 import { TraceabilityModule } from '@/modules/traceability/traceability.module';
 import { UserAddressesModule } from '@/modules/user-addresses/user-addresses.module';
 import { UsersModule } from '@/modules/users/users.module';
+import { VibeModule } from '@/modules/vibe/vibe.module';
 import { WorkOrderModule } from '@/modules/work-order/work-order.module';
 
 // Services
@@ -65,6 +67,8 @@ import { RedisModule } from './services/redis/redis.module';
         TraceabilityModule,
         JobsModule,
         ConnectivityModule,
+        AiCoreModule,
+        VibeModule,
         HealthModule,
     ],
     controllers: [AppController],

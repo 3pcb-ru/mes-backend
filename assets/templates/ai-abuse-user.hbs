@@ -1,0 +1,153 @@
+<html lang='en'>
+    <head>
+        <meta charset='UTF-8' />
+        <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+        <meta http-equiv='X-UA-Compatible' content='IE=edge' />
+        <meta name='format-detection' content='telephone=no' />
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+        <title>Access Restricted - GRVT MES</title>
+        <style>
+            body, table, td, p, a, li, blockquote {
+                -webkit-text-size-adjust: 100%;
+                -ms-text-size-adjust: 100%;
+            }
+            table, td {
+                mso-table-lspace: 0pt;
+                mso-table-rspace: 0pt;
+            }
+            img {
+                -ms-interpolation-mode: bicubic;
+                border: 0;
+                height: auto;
+                line-height: 100%;
+                outline: none;
+                text-decoration: none;
+            }
+            body {
+                margin: 0;
+                padding: 0;
+                background-color: #f8fafc;
+                font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                color: #1e293b;
+            }
+            .email-container {
+                width: 100%;
+                background-color: #f8fafc;
+            }
+            .email-body {
+                max-width: 600px;
+                margin: 0 auto;
+                background-color: #0f172a;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+                overflow: hidden;
+            }
+            .header-gradient-warning {
+                background: linear-gradient(to right, #ef4444, #b91c1c);
+                padding: 40px 20px;
+                text-align: center;
+            }
+            .cta-button-danger {
+                display: inline-block;
+                padding: 12px 24px;
+                background: #ef4444;
+                color: #ffffff !important;
+                text-decoration: none;
+                border-radius: 10px;
+                font-weight: 600;
+                font-size: 16px;
+                transition: opacity 0.2s;
+            }
+            .restriction-notice {
+                background-color: rgba(239, 68, 68, 0.1);
+                border-left: 4px solid #ef4444;
+                padding: 16px 20px;
+                border-radius: 6px;
+                margin: 24px 0;
+            }
+            .text-secondary {
+                color: #94a3b8;
+            }
+            @media screen and (max-width: 600px) {
+                .email-body {
+                    border-radius: 0;
+                }
+            }
+        </style>
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f8fafc;">
+        <table role='presentation' cellspacing='0' cellpadding='0' border='0' width='100%' class='email-container'>
+            <tr>
+                <td style='padding: 40px 20px;'>
+                    <table role='presentation' cellspacing='0' cellpadding='0' border='0' width='100%' class='email-body'>
+                        <!-- Header -->
+                        <tr>
+                            <td class="header-gradient-warning">
+                                <img src='{{serverUrl}}/public/images/logo.png' alt='GRVT MES' style='height: 48px; width: auto; display: block; margin: 0 auto;' />
+                            </td>
+                        </tr>
+
+                        <!-- Content -->
+                        <tr>
+                            <td style='padding: 48px 40px;'>
+                                <table role='presentation' cellspacing='0' cellpadding='0' border='0' width='100%'>
+                                    <tr>
+                                        <td style='text-align: center; padding-bottom: 32px;'>
+                                            <h1 style='margin: 0 0 16px 0; font-size: 28px; font-weight: 600; color: #ffffff; line-height: 1.2;'>
+                                                Access Restricted
+                                            </h1>
+                                            <p class='text-secondary' style='margin: 0; font-size: 18px; line-height: 1.5;'>
+                                                Hello {{name}},
+                                            </p>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <p style='margin: 0 0 24px 0; font-size: 16px; color: #ffffff; line-height: 1.6;'>
+                                                Our automated security systems have detected an unusual number of invalid or harmful requests from your account to the AI Vibe Agent.
+                                            </p>
+
+                                            <div class="restriction-notice">
+                                                <p style='margin: 0; font-size: 14px; color: #ffffff; line-height: 1.5;'>
+                                                    <strong>Status:</strong> Permanently Restricted<br />
+                                                    <strong>Reason:</strong> Violation of AI usage policy (Excessive incoherent/harmful requests).
+                                                </p>
+                                            </div>
+
+                                            <p style='margin: 24px 0; font-size: 15px; color: #94a3b8; line-height: 1.6; text-align: center;'>
+                                                If you believe this is unintentional or would like to request a reactivation, please contact our support team.
+                                            </p>
+
+                                            <table role='presentation' cellspacing='0' cellpadding='0' border='0' style='margin: 0 auto;'>
+                                                <tr>
+                                                    <td style="text-align: center;">
+                                                        <a href="mailto:support@grvt.cc" class="cta-button-danger">
+                                                            Contact Support
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+
+                        <!-- Footer -->
+                        <tr>
+                            <td style='background-color: rgba(0, 0, 0, 0.2); padding: 32px 40px; border-top: 1px solid rgba(255, 255, 255, 0.1); text-align: center;'>
+                                <p style='margin: 0; font-size: 12px; color: #717182;'>
+                                    <strong>GRVT MES Security Orchestrator</strong><br />
+                                    Powered by Dannie Group
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+</html>

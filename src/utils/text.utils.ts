@@ -1,4 +1,4 @@
-import { type Options, RandomStringGenerator } from './random';
+import { RandomStringGenerator, type Options } from './random';
 
 /**
  * A utility class for string manipulations and formatting.
@@ -93,5 +93,18 @@ export class TextUtils {
             .replace(/[^a-z0-9-]/g, '')
             .replace(/-+/g, '-')
             .replace(/^-|-$/g, '');
+    }
+
+    /**
+     * Sanitizes a prompt for AI processing by:
+     * - Stripping HTML and script tags.
+     * - Normalizing multiple spaces and newlines.
+     * - Trimming leading/trailing whitespace.
+     */
+    static sanitizeAiPrompt(prompt: string): string {
+        return prompt
+            .replace(/<[^>]*>?/gm, '') // Strip HTML tags
+            .replace(/\s+/g, ' ') // Normalize spaces
+            .trim();
     }
 }

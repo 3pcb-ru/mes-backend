@@ -1,7 +1,7 @@
 import { registerAs } from '@nestjs/config';
 import type { StringValue } from 'ms';
 
-import { DEFAULT_EXPIRY } from '@/common/constants';
+import { DEFAULT_EXPIRY, DEFAULT_GEMINI_MODEL } from '@/common/constants';
 
 export const API_CONFIG_TOKEN = 'server';
 
@@ -32,6 +32,10 @@ export interface IAppConfiguration {
     readonly recaptcha: {
         readonly enabled: boolean;
         readonly secretKey: string;
+    };
+    readonly ai: {
+        readonly geminiApiKey: string;
+        readonly geminiModel: string;
     };
 }
 
@@ -122,6 +126,10 @@ export const serverConfig = registerAs(API_CONFIG_TOKEN, (): IAppConfiguration =
         recaptcha: {
             enabled: process.env.RECAPTCHA_ENABLED === 'true',
             secretKey: process.env.RECAPTCHA_SECRET_KEY as string,
+        },
+        ai: {
+            geminiApiKey: process.env.GEMINI_API_KEY as string,
+            geminiModel: (process.env.GEMINI_MODEL as string) || DEFAULT_GEMINI_MODEL,
         },
     };
 });

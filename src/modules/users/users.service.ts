@@ -143,6 +143,8 @@ export class UsersService extends BaseFilterableService {
                 avatarId: Schema.user.avatarId,
                 role: Schema.roles,
                 organization: Schema.organization,
+                vibeFailCount: Schema.user.vibeFailCount,
+                vibeBlockedUntil: Schema.user.vibeBlockedUntil,
             })
             .from(Schema.user)
             .innerJoin(Schema.roles, eq(Schema.user.roleId, Schema.roles.id))
@@ -238,6 +240,8 @@ export class UsersService extends BaseFilterableService {
                     avatarId: Schema.user.avatarId,
                     role: Schema.roles,
                     organization: Schema.organization,
+                    vibeFailCount: Schema.user.vibeFailCount,
+                    vibeBlockedUntil: Schema.user.vibeBlockedUntil,
                 })
                 .from(Schema.user)
                 .innerJoin(Schema.roles, eq(Schema.user.roleId, Schema.roles.id))

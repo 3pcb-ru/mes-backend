@@ -1,11 +1,11 @@
 import { sql } from 'drizzle-orm';
-import { boolean, index, pgTable, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgTable, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
 
 import { DEFAULT_CHAR_LENGTH } from '@/common/constants';
 
+import { attachments } from './attachments.schema';
 import { organization } from './organization.schema';
 import { roles as roleSchema } from './roles.schema';
-import { attachments } from './attachments.schema';
 
 export const user = pgTable(
     'users',
@@ -25,6 +25,8 @@ export const user = pgTable(
             .references(() => roleSchema.id, { onDelete: 'restrict' }),
         organizationId: uuid('factory_id').references(() => organization.id, { onDelete: 'set null' }),
         avatarId: uuid('avatar_id').references((): any => attachments.id, { onDelete: 'set null' }),
+        vibeFailCount: integer('vibe_fail_count').default(0),
+        vibeBlockedUntil: timestamp('vibe_blocked_until', { withTimezone: true }),
     },
     (table) => [
         // Indexes

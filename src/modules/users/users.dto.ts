@@ -33,6 +33,8 @@ const updateUserProfileSchema = userUpdateSchema
         updatedAt: true,
         deletedAt: true,
         roleId: true,
+        vibeFailCount: true,
+        vibeBlockedUntil: true,
     })
     .extend({
         firstName: validateText({ regex: nameRegex }),
@@ -213,6 +215,12 @@ export class UserResponseDto {
 
     @ApiProperty({ description: 'User organization details', required: false })
     organization?: OrganizationResponseDto | null;
+
+    @ApiProperty({ description: 'User vibe agent fail count', required: false })
+    vibeFailCount: number;
+
+    @ApiProperty({ description: 'User vibe agent blocked until', required: false })
+    vibeBlockedUntil: Date | null;
 }
 
 // API response wrappers

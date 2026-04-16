@@ -137,6 +137,13 @@ export const Permissions = {
         Update: 'inventory.update',
         Delete: 'inventory.delete',
     },
+    vibe: {
+        Read: 'vibe.read',
+        ReadAll: 'vibe.read.all',
+        Write: 'vibe.write',
+        Update: 'vibe.update',
+        Delete: 'vibe.delete',
+    },
 } as const;
 
 export const PermissionDescriptions: Record<string, string> = {
@@ -269,4 +276,11 @@ export const PermissionDescriptions: Record<string, string> = {
     'inventory.write': 'Create inventory records',
     'inventory.update': 'Update inventory data',
     'inventory.delete': 'Delete inventory records',
+
+    // --- Vibe AI ---
+    'vibe.read': 'Read own Vibe pages',
+    'vibe.read.all': 'Read all Vibe pages in the organization',
+    'vibe.write': 'Generate layouts and create Vibe pages',
+    'vibe.update': 'Update Vibe pages',
+    'vibe.delete': 'Delete Vibe pages',
 };
