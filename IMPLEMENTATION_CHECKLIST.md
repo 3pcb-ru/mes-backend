@@ -334,7 +334,7 @@ src/modules/<feature>/
 
 Every AI agent session MUST conclude by recording a concise summary of the "vibe coding" session in the `.trace/` directory.
 
-- **Rule**: Create a new `.md` file in `.trace/` named `YYYY-MM-DD-short-description.md`.
+- **Rule**: Create a new `.md` file in `.trace/` named `YYYY-MM-DD-HH-MM-short-description.md`.
 - **Content**:
     - **Date and Location**: Date, time, location, timezone. (e.g., 2026-04-15 15:44 Turkey +3:00GMT)
     - **Agent**: Your name + AI Tool - AI Model (e.g., Amin Abbasi - Antigravity - Gemini 3.0 Flash).
