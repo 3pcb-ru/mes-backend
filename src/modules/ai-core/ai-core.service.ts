@@ -41,9 +41,17 @@ export class AiCoreService implements OnModuleInit {
      */
     normalizeError(error: unknown): string {
         this.logger.error('AI Generation Error:', error);
-        if ((error as { status: number }).status === 429) {
+        
+        const status = (error as { status: number })?.status;
+        
+        if (status === 429) {
             return 'AI rate limit exceeded. Please try again in a few moments.';
         }
+        
+        if (status === 503) {
+            return 'AI service is currently experiencing high demand and is temporarily unavailable. Please try again in a moment.';
+        }
+        
         return (error as { message: string }).message || 'An unexpected error occurred during AI processing.';
     }
 }

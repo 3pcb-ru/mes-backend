@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 
 import { AiCoreService } from './ai-core.service';
 
@@ -7,6 +7,8 @@ import { AiCoreService } from './ai-core.service';
  */
 @Injectable()
 export class VibeProvider {
+    private readonly logger = new Logger(VibeProvider.name);
+
     constructor(private readonly aiCore: AiCoreService) {}
 
     private getSystemPrompt(): string {
@@ -65,26 +67,50 @@ USER REQUEST:
 Generate the JSON configuration:
         `;
 
-        try {
-            const result = await model.generateContent(fullPrompt);
-            const response = await result.response;
-            const text = response.text();
+        let lastError: unknown;
+        const maxRetries = 3;
 
-            // Basic JSON extraction (naive)
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-                throw new Error('AI failed to generate a valid JSON layout.');
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const result = await model.generateContent(fullPrompt);
+                const response = await result.response;
+                const text = response.text();
+
+                // Basic JSON extraction (naive)
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) {
+                    throw new Error('AI failed to generate a valid JSON layout.');
+                }
+
+                const layout = JSON.parse(jsonMatch[0]);
+
+                // Security Scrubbing: Strict No-Code enforcement
+                this.validateSecurity(jsonMatch[0]);
+
+                return layout;
+            } catch (error: unknown) {
+                lastError = error;
+                const status = (error as { status: number })?.status;
+
+                // Only retry on 503 or 429
+                if (status === 503 || status === 429) {
+                    const delay = Math.pow(2, i) * 1000;
+                    this.logger.warn(`AI Generation failed (Status: ${status}). Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`);
+                    await new Promise((resolve) => setTimeout(resolve, delay));
+                    continue;
+                }
+                break;
             }
-
-            const layout = JSON.parse(jsonMatch[0]);
-
-            // Security Scrubbing: Strict No-Code enforcement
-            this.validateSecurity(jsonMatch[0]);
-
-            return layout;
-        } catch (error) {
-            throw new Error(this.aiCore.normalizeError(error), { cause: error });
         }
+
+        const normalizedMessage = this.aiCore.normalizeError(lastError);
+        const status = (lastError as { status: number })?.status;
+
+        if (status === 503) {
+            throw new ServiceUnavailableException(normalizedMessage);
+        }
+
+        throw new Error(normalizedMessage, { cause: lastError });
     }
 
     /**
@@ -106,23 +132,40 @@ Reject if:
 Respond ONLY with a JSON object: {"valid": boolean, "reason": "user_friendly_explanation_if_invalid"}
         `;
 
-        try {
-            const result = await model.generateContent(moderationPrompt);
-            const response = await result.response;
-            const text = response.text();
+        const maxRetries = 2;
+        let lastError: unknown;
 
-            const jsonMatch = text.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) return { valid: true }; // Fallback to bypass if AI fails to format
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const result = await model.generateContent(moderationPrompt);
+                const response = result.response;
+                const text = response.text();
 
-            const resultJson = JSON.parse(jsonMatch[0]);
-            return {
-                valid: !!resultJson.valid,
-                reason: resultJson.reason || 'This request does not seem to be a valid UI generation prompt.',
-            };
-        } catch (error) {
-            // If moderation fails, we allow the main flow but log it
-            return { valid: true };
+                const jsonMatch = text.match(/\{[\s\S]*\}/);
+                if (!jsonMatch) return { valid: true }; // Fallback to bypass if AI fails to format
+
+                const resultJson = JSON.parse(jsonMatch[0]);
+                return {
+                    valid: !!resultJson.valid,
+                    reason: resultJson.reason || 'This request does not seem to be a valid UI generation prompt.',
+                };
+            } catch (error: unknown) {
+                lastError = error;
+                const status = (error as { status: number })?.status;
+
+                if (status === 503 || status === 429) {
+                    const delay = 1000;
+                    this.logger.warn(`AI Intent Validation failed (Status: ${status}). Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`);
+                    await new Promise((resolve) => setTimeout(resolve, delay));
+                    continue;
+                }
+                break;
+            }
         }
+
+        // If moderation fails after retries, we allow the main flow but log it
+        this.logger.error('AI Intent Validation failed after retries:', lastError);
+        return { valid: true };
     }
 
     private validateSecurity(jsonString: string) {
