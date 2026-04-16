@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GenerativeModel, GoogleGenerativeAI } from '@google/generative-ai';
+
 import { DEFAULT_GEMINI_MODEL } from '@/common/constants';
 
 @Injectable()
@@ -40,18 +41,40 @@ export class AiCoreService implements OnModuleInit {
      * Standard normalization for AI errors.
      */
     normalizeError(error: unknown): string {
+        const details = this.getErrorDetails(error);
+        return details.message;
+    }
+
+    /**
+     * Extracts detailed error information including status and retry delays.
+     */
+    getErrorDetails(error: unknown): { status?: number; message: string; retryAfter?: number } {
         this.logger.error('AI Generation Error:', error);
-        
+
         const status = (error as { status: number })?.status;
-        
+        let message = (error as { message: string }).message || 'An unexpected error occurred during AI processing.';
+        let retryAfter: number | undefined;
+
         if (status === 429) {
-            return 'AI rate limit exceeded. Please try again in a few moments.';
+            message = 'AI quota limit exceeded. Please wait a moment for the coolDown.';
+
+            // Extract retryDelay from Google RPC errorDetails
+            const errorDetails = (error as { errorDetails?: any[] })?.errorDetails;
+            const retryInfo = errorDetails?.find((d) => d['@type']?.includes('RetryInfo'));
+            if (retryInfo?.retryDelay) {
+                // Parse "57s" to 57
+                const seconds = parseInt(retryInfo.retryDelay, 10);
+                if (!isNaN(seconds)) {
+                    retryAfter = seconds;
+                }
+            } else {
+                // Default fallback if no specific delay provided
+                retryAfter = 60;
+            }
+        } else if (status === 503) {
+            message = 'AI service is currently experiencing high demand and is temporarily unavailable. Please try again in a moment.';
         }
-        
-        if (status === 503) {
-            return 'AI service is currently experiencing high demand and is temporarily unavailable. Please try again in a moment.';
-        }
-        
-        return (error as { message: string }).message || 'An unexpected error occurred during AI processing.';
+
+        return { status, message, retryAfter };
     }
 }

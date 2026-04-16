@@ -1,4 +1,4 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 
 import { AiCoreService } from './ai-core.service';
 
@@ -92,8 +92,8 @@ Generate the JSON configuration:
                 lastError = error;
                 const status = (error as { status: number })?.status;
 
-                // Only retry on 503 or 429
-                if (status === 503 || status === 429) {
+                // Only retry on 503 (Demand spike)
+                if (status === 503) {
                     const delay = Math.pow(2, i) * 1000;
                     this.logger.warn(`AI Generation failed (Status: ${status}). Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`);
                     await new Promise((resolve) => setTimeout(resolve, delay));
@@ -103,14 +103,23 @@ Generate the JSON configuration:
             }
         }
 
-        const normalizedMessage = this.aiCore.normalizeError(lastError);
-        const status = (lastError as { status: number })?.status;
+        const errorDetails = this.aiCore.getErrorDetails(lastError);
 
-        if (status === 503) {
-            throw new ServiceUnavailableException(normalizedMessage);
+        if (errorDetails.status === 429) {
+            throw new HttpException(
+                {
+                    message: errorDetails.message,
+                    retryAfter: errorDetails.retryAfter,
+                },
+                HttpStatus.TOO_MANY_REQUESTS,
+            );
         }
 
-        throw new Error(normalizedMessage, { cause: lastError });
+        if (errorDetails.status === 503) {
+            throw new ServiceUnavailableException(errorDetails.message);
+        }
+
+        throw new Error(errorDetails.message, { cause: lastError });
     }
 
     /**
@@ -153,7 +162,7 @@ Respond ONLY with a JSON object: {"valid": boolean, "reason": "user_friendly_exp
                 lastError = error;
                 const status = (error as { status: number })?.status;
 
-                if (status === 503 || status === 429) {
+                if (status === 503) {
                     const delay = 1000;
                     this.logger.warn(`AI Intent Validation failed (Status: ${status}). Retrying in ${delay}ms... (Attempt ${i + 1}/${maxRetries})`);
                     await new Promise((resolve) => setTimeout(resolve, delay));
