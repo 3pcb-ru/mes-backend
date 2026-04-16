@@ -73,6 +73,8 @@ export class AiCoreService implements OnModuleInit {
             }
         } else if (status === 503) {
             message = 'AI service is currently experiencing high demand and is temporarily unavailable. Please try again in a moment.';
+        } else if (message.includes('SECURITY_VIOLATION')) {
+            message = 'Security Protocol Breach: The AI attempted to generate forbidden technical keywords (e.g., scripts, raw logic, or internal system terms). This usually happens when requesting raw code or system-level data. Please rephrase your request to focus on UI presentation and data display.';
         }
 
         return { status, message, retryAfter };
