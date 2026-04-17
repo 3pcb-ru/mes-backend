@@ -12,7 +12,7 @@ import { TraceabilityService } from '@/modules/traceability/traceability.service
 import { JwtUser } from '@/types/jwt.types';
 import { TextUtils } from '@/utils/text.utils';
 
-import { CreateVibePageDto, GenerateVibeLayoutDto } from './vibe.dto';
+import { CreateVibePageDto, GenerateVibeLayoutDto, UpdateVibePageDto } from './vibe.dto';
 import { VibePolicy } from './vibe.policy';
 
 @Injectable()
@@ -112,6 +112,43 @@ export class VibeService extends BaseFilterableService {
         );
 
         return page;
+    }
+
+    async updatePage(user: JwtUser, id: string, dto: UpdateVibePageDto) {
+        const [page] = await this.db.select().from(vibePages).where(eq(vibePages.id, id));
+
+        if (!page) {
+            throw new NotFoundException('Page not found');
+        }
+
+        if (!this.policy.canWriteRecord(user, page)) {
+            throw new ForbiddenException('You do not have permission to update this page');
+        }
+
+        const [updatedPage] = await this.db
+            .update(vibePages)
+            .set({
+                ...dto,
+                // Ensure creator/org cannot be changed
+                creatorId: page.creatorId,
+                organizationId: page.organizationId,
+            })
+            .where(eq(vibePages.id, id))
+            .returning();
+
+        // 4. Record Traceability
+        await this.traceabilityService.recordChange(
+            {
+                entityType: 'VibePage',
+                entityId: updatedPage.id,
+                action: 'UPDATE',
+                oldData: page,
+                newData: updatedPage,
+            },
+            user,
+        );
+
+        return updatedPage;
     }
 
     async getPages(user: JwtUser) {

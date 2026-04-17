@@ -37,6 +37,16 @@ const vibeEndpointConfig = {
             ApiResponse({ status: 401, description: 'Unauthorized', type: ErrorResponseDto }),
         ),
 
+    updatePage: () =>
+        applyDecorators(
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.vibe.Write),
+            ApiOperation({ summary: 'Update a Vibe page' }),
+            ApiResponse({ status: 200, description: 'Vibe page updated successfully' }),
+            ApiResponse({ status: 401, description: 'Unauthorized', type: ErrorResponseDto }),
+            ApiResponse({ status: 404, description: 'Page not found', type: ErrorResponseDto }),
+        ),
+
     deletePage: () =>
         applyDecorators(
             UseGuards(JwtAuthGuard, PermissionGuard),

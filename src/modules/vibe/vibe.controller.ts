@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '@/common/decorators/user.decorator';
@@ -6,7 +6,7 @@ import { JwtUser } from '@/types/jwt.types';
 import { ok } from '@/utils';
 
 import { VibeDecorators } from './vibe.decorators';
-import { CreateVibePageDto, GenerateVibeLayoutDto } from './vibe.dto';
+import { CreateVibePageDto, GenerateVibeLayoutDto, UpdateVibePageDto } from './vibe.dto';
 import { VibeService } from './vibe.service';
 
 @ApiTags('Vibe')
@@ -34,6 +34,13 @@ export class VibeController {
     async getPages(@CurrentUser() user: JwtUser) {
         const result = await this.vibeService.getPages(user);
         return ok(result).message('Vibe pages retrieved successfully');
+    }
+
+    @Patch('pages/:id')
+    @VibeDecorators('updatePage')
+    async patchPage(@CurrentUser() user: JwtUser, @Param('id') id: string, @Body() dto: UpdateVibePageDto) {
+        const result = await this.vibeService.updatePage(user, id, dto);
+        return ok(result).message('Vibe page updated successfully');
     }
 
     @Delete('pages/:id')
