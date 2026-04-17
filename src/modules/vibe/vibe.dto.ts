@@ -9,9 +9,11 @@ export const CreateVibePageSchema = z.object({
 });
 
 export const GenerateVibeLayoutSchema = z.object({
-    prompt: z.string().min(5).max(1000),
+    prompt: z.string().min(2).max(1000), // Relaxing slightly for refinement prompts
     apiManifest: z.record(z.string(), z.any()),
     componentsManifest: z.record(z.string(), z.any()),
+    currentPageId: z.string().optional(),
+    currentConfig: z.record(z.string(), z.any()).optional(),
 });
 
 export const UpdateVibePageSchema = z.object({

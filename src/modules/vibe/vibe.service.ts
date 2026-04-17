@@ -84,7 +84,7 @@ export class VibeService extends BaseFilterableService {
         // 3. Success -> Reset counter and generate
         await this.db.update(userSchema).set({ vibeFailCount: 0, vibeBlockedUntil: null }).where(eq(userSchema.id, user.id));
 
-        return this.vibeProvider.generateLayout(sanitizedPrompt, dto.apiManifest, dto.componentsManifest);
+        return this.vibeProvider.generateLayout(sanitizedPrompt, dto.apiManifest, dto.componentsManifest, dto.currentConfig);
     }
 
     async createPage(user: JwtUser, dto: CreateVibePageDto) {

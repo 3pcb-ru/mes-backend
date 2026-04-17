@@ -1,144 +1,95 @@
-# mes-backend
+# MES Backend
 
-**mes-backend** is a **lightweight, modular Manufacturing Execution System (MES)** designed as a **DDD-aligned modular monolith**.
-
-It aims to provide a solid, extensible foundation for:
-
-- Small to mid-sized manufacturing environments
-- Internal production tracking and execution
-- Learning and experimenting with MES domain modeling
-- Building custom MES workflows on top of a clean architecture
-
-The project is **source-available** and **free for non-commercial use**.
+**MES Backend** is a high-performance, modular Manufacturing Execution System (MES) designed as a **DDD-aligned Modular Monolith**. It provides a robust, multi-tenant foundation for modern manufacturing environments, featuring integrated AI orchestration and strict traceability.
 
 ---
 
-## Goals & Philosophy
+## 🚀 Quick Start (pnpm)
 
-- 🧱 **Modular Monolith** – clear bounded contexts without microservice overhead
-- 🧠 **Domain-Driven Design (DDD)** – domain-first modeling, explicit boundaries
-- 🔌 **Extensible** – designed to be customized per factory or workflow
-- ⚙️ **Pragmatic MES** – focused on execution, not ERP-level complexity
-- 🚀 **Future-ready** – architecture that can evolve into hosted or enterprise offerings
+Ensure you have [Docker](https://www.docker.com/) and [pnpm](https://pnpm.io/) installed.
 
----
-
-## Scope (Initial)
-
-Planned or intended functional areas include:
-
-- Production orders & execution
-- Work centers / machines
-- Routing & operation tracking
-- Basic quality checks
-- Status and progress visibility
-- Audit-friendly state transitions
-
-> ⚠️ This is **not** a full ERP and intentionally avoids accounting, finance, or HR concerns.
-
----
-
-## Architecture Overview
-
-- **Architecture**: Modular Monolith
-- **Design approach**: Domain-Driven Design (DDD)
-- **Bounded contexts**: Implemented as isolated modules
-- **Dependency direction**: Domain → Application → Infrastructure
-- **Integration style**: Internal events / messaging (no hard coupling)
-
-The goal is to keep **domain logic independent** from frameworks and infrastructure.
+1.  **Clone the environment**:
+    ```bash
+    cp .env.example .env
+    ```
+2.  **Start Infrastructure** (Postgres, Redis, MinIO):
+    ```bash
+    docker compose up -d
+    ```
+3.  **Install Dependencies**:
+    ```bash
+    pnpm install
+    ```
+4.  **Initialize Database** (Migrations + Permissions Seeding):
+    ```bash
+    pnpm prod:init
+    ```
+5.  **Run Development Server**:
+    ```bash
+    pnpm dev
+    ```
 
 ---
 
-## Getting Started
+## 🛠️ Tech Stack
 
-> 🚧 The project is under active development.
-> Setup instructions will be added once the initial module structure stabilizes.
-
-Planned stack (subject to refinement):
-
-- Node.js (LTS)
-- NestJS
-- TypeScript
-- Relational database (TBD)
-- WebSocket / real-time updates (where applicable)
-
----
-
-## Usage
-
-At this stage, the project is intended for:
-
-- Code exploration
-- Architectural reference
-- Early adopters experimenting with MES concepts
-
-Usage examples and API documentation will be added incrementally.
+| Layer | Technology |
+| :--- | :--- |
+| **Framework** | [NestJS](https://nestjs.com/) (v11.x) |
+| **Language** | [TypeScript](https://www.typescriptlang.org/) (v5.9+) |
+| **ORM** | [Drizzle ORM](https://orm.drizzle.team/) |
+| **Database** | [PostgreSQL](https://www.postgresql.org/) (v15+) |
+| **Cache & Jobs** | [Redis](https://redis.io/) + [BullMQ](https://docs.bullmq.io/) |
+| **Validation** | [Zod](https://zod.dev/) + `nestjs-zod` |
+| **Storage** | [MinIO](https://min.io/) (S3 Compatible) |
+| **AI** | [Google Gemini AI](https://ai.google.dev/) |
 
 ---
 
-## Roadmap (High-Level)
+## ✨ Key Features
 
-- [ ] Define core domain modules (Production, Routing, Quality)
-- [ ] Establish base module template & boundaries
-- [ ] Introduce authentication & authorization
-- [ ] Add basic execution & status tracking
-- [ ] Publish architectural guidelines
-- [ ] Prepare first tagged public release
+### 🧠 AI Vibe Coding Engine
+A state-of-the-art Generative UI orchestrator that allows creation of custom dashboard pages via natural language. Uses a strictly sandboxed JSON-based protocol to ensure security and design consistency.
 
----
+### 🛡️ Multi-Tenancy & Advanced RBAC
+*   **Organization-Level Isolation**: All data is strictly scoped by `organizationId`.
+*   **Resource-Scoped Policy**: Granular permissions (Read/Create/Update/Delete) defined at the resource level in `*.policy.ts`.
+*   **Token Invalidation**: Immediate session termination upon role or permission changes via Redis.
 
-## Contributing
+### 📜 Global LogTraceability & Audit Trails
+Every mutation on critical business entities (Work Orders, BOM, Materials) is automatically captured in a row-level audit trail, ensuring full compliance and accountability.
 
-Contributions are welcome **for non-commercial use cases**.
+### 🏗️ Modular Monolith Architecture
+*   **Bounded Contexts**: Feature-specific modules with isolated logic.
+*   **Drizzle Relational Queries**: High-performance, type-safe SQL with automated migration management.
+*   **Concurrency & Pessimistic Locking**: Integrated `.forUpdate()` support in transactions for high-frequency data consistency (e.g., scanners, PLC triggers).
+*   **Response Wrapping**: Standardized `{ success, message, data }` responses for predictable API consumption.
 
-Before contributing:
+### 🕒 Background Job Infrastructure
+Robust async task processing using **BullMQ** and **Redis** for heavy operations like report generation, cleanup tasks, and AI processing.
 
-- Keep changes aligned with DDD principles
-- Avoid introducing framework-specific logic into domain layers
-- Open an issue before large structural changes
-
-By contributing, you agree that:
-
-- Your contributions may be included in future commercial versions
-- You grant the project owner the right to relicense contributions if needed
-
-(Contributor guidelines will be expanded later.)
+### 🕵️ Vibe-Trace Protocol
+A meta-level engineering audit system located in `.trace/`. Every architectural shift and AI session is documented to maintain a clear history of the codebase evolution.
 
 ---
 
-## License
+## 📖 Documentation
 
-This project is **source-available** and licensed under the
-**Non-Commercial Source-Available License**.
-
-You are free to:
-
-- Use the software internally
-- Fork and modify the code
-- Experiment and build upon it for non-commercial purposes
-
-You may **NOT**:
-
-- Sell this software or derivative works
-- Offer it as a paid service (SaaS, hosting, managed MES)
-- Include it in a commercial product
-
-If you are interested in:
-
-- Commercial usage
-- Enterprise licensing
-- Hosted or supported versions
-
-Please contact the author for a commercial license.
-
-See the [LICENSE](./LICENSE) file for full details.
+*   **API Specs**: Swagger/OpenAPI documentation is available at `/api/docs` in development mode.
+*   **Implementation Checklist**: See [IMPLEMENTATION_CHECKLIST.md](./IMPLEMENTATION_CHECKLIST.md) for architectural standards.
+*   **MES Agent Protocol**: See [PROTOCOL.md](./PROTOCOL.md) for AI interaction guidelines.
 
 ---
 
-## Project Status
+## ⚖️ License & Ethics
 
-🟡 **Early development / public foundation**
+This project is **source-available** and licensed under the **Non-Commercial Source-Available License**.
 
-The project is actively evolving.
-APIs, module boundaries, and internal structure may change until a stable release is published.
+*   **Non-Commercial Usage**: Free to use, fork, and modify for internal or experimental purposes.
+*   **Commercial Usage**: Requires a separate license. Contact the project owner for enterprise deployments or SaaS offerings.
+
+---
+
+## 🟡 Project Status
+
+Active Development. The project is evolving rapidly into a production-grade MES foundation.

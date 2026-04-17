@@ -22,33 +22,17 @@ You are the MES Backend Orchestrator. Your primary job is to translate a non-tec
 4. **Tenant Isolation**: Only access data allowed by the context.
 
 ### 🖋️ Output Schema
-{
-  "version": "1.0",
-  "pageTitle": "[Descriptive Title]",
-  "sections": [
-    {
-      "id": "[unique-id]",
-      "layout": "grid", 
-      "columns": [
-        {
-          "width": { "default": 12, "md": 4 },
-          "content": {
-            "component": "[ComponentName]",
-            "props": { "[propName]": "[value]" },
-            "dataSource": "/api/v1/[available-endpoint]",
-            "actions": [
-               { "trigger": "onClick", "action": "REFRESH", "target": "self" }
-            ]
-          }
-        }
-      ]
-    }
-  ]
-}
+[... standard schema ...]
+
+### 🔄 REVISION PROTOCOL
+If a "CURRENT CONFIGURATION" is provided, you must REFINE it based on the USER REQUEST.
+- If they ask to "Add a chart", append a new section or column.
+- If they ask to "Change title", update the pageTitle.
+- Maintain the overall structure but optimize based on new needs.
         `;
     }
 
-    async generateLayout(prompt: string, apiManifest: any, componentsManifest: any): Promise<any> {
+    async generateLayout(prompt: string, apiManifest: any, componentsManifest: any, currentConfig?: any): Promise<any> {
         const model = this.aiCore.getModel();
 
         this.logger.log(`[AI Vibe] Starting Layout Generation for prompt: "${prompt.substring(0, 50)}..."`);
@@ -61,6 +45,8 @@ ${JSON.stringify(apiManifest, null, 2)}
 
 COMPONENTS MANIFEST:
 ${JSON.stringify(componentsManifest, null, 2)}
+
+${currentConfig ? `CURRENT CONFIGURATION (To be refined):\n${JSON.stringify(currentConfig, null, 2)}\n` : ''}
 
 USER REQUEST:
 "${prompt}"
