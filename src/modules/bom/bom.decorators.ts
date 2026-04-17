@@ -107,4 +107,12 @@ export const BomDecorators = {
             ApiOperation({ summary: 'Remove material from revision (Draft only)' }),
             ApiResponse({ status: 200, description: 'Material removed' }),
         ),
+
+    searchParts: () =>
+        applyDecorators(
+            UseGuards(JwtAuthGuard, PermissionGuard),
+            RequiresPermissions(Permissions.bom.Read),
+            ApiOperation({ summary: 'Search parts locally and on Octopart' }),
+            ApiResponse({ status: 200, description: 'Parts retrieved' }),
+        ),
 };

@@ -7,7 +7,7 @@ import { ZodSerializerInterceptor } from 'nestjs-zod';
 
 import { ResponseInterceptor } from '@/common/interceptors/response.interceptor';
 import { SecurityHeadersMiddleware } from '@/common/middleware/security-headers.middleware';
-import { databaseConfig, redisConfig, serverConfig } from '@/config';
+import { databaseConfig, octopartConfig, redisConfig, serverConfig } from '@/config';
 import { HealthModule } from '@/health/health.module';
 import { PermissionSeederService } from '@/models/seeder/permission-seeder.service';
 // Modules
@@ -43,7 +43,7 @@ import { RedisModule } from './services/redis/redis.module';
     imports: [
         ConfigModule.forRoot({
             isGlobal: true,
-            load: [databaseConfig, redisConfig, serverConfig],
+            load: [databaseConfig, redisConfig, serverConfig, octopartConfig],
         }),
         EventEmitterModule.forRoot(),
         ScheduleModule.forRoot(),

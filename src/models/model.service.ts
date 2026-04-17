@@ -1,15 +1,14 @@
 import { constants, promises } from 'fs';
 import { join } from 'path';
-import { Pool } from 'pg';
-
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { Pool } from 'pg';
 
-import { DATABASE_CONFIG_TOKEN, IDatabaseConfig } from '@/config';
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
+import { DATABASE_CONFIG_TOKEN, IDatabaseConfig } from '@/config';
+
 import * as schema from './schema';
 
 @Injectable()
@@ -127,11 +126,6 @@ export class DrizzleService implements OnModuleInit, OnModuleDestroy {
             });
             this.logger.log('Migrations completed successfully');
         } catch (error) {
-            if (error.code === '42P07' || error.cause?.code === '42P07') {
-                // Table already exists
-                this.logger.warn('Tables already exist, skipping migration');
-                return;
-            }
             this.logger.error('Migrations failed:', error);
             throw error;
         }

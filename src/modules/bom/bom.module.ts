@@ -9,11 +9,12 @@ import { BomMaterialPolicy, BomPolicy } from './bom.policy';
 import { BomService } from './bom.service';
 import { MaterialController } from './material.controller';
 import { RevisionController } from './revision.controller';
+import { OctoPartService } from './services/octopart.service';
 
 @Module({
     imports: [DrizzleModule, TraceabilityModule],
     controllers: [RevisionController, MaterialController],
-    providers: [BomService, BomPolicy, BomMaterialPolicy, FilterService, CustomLoggerService],
+    providers: [BomService, BomPolicy, BomMaterialPolicy, FilterService, CustomLoggerService, OctoPartService],
     exports: [BomService, BomPolicy, BomMaterialPolicy],
 })
 export class BomModule {}

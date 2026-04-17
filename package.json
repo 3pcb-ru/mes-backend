@@ -1,7 +1,7 @@
 {
     "name": "mes-backend",
     "description": "NestJS backend application for online MES platform for manufacturing enterprises to manage and optimize their production processes.",
-    "version": "7.7.0",
+    "version": "8.0.0",
     "private": true,
     "scripts": {
         "preinstall": "npx only-allow pnpm",
@@ -54,6 +54,7 @@
         "@nestjs/serve-static": "5.0.4",
         "@nestjs/swagger": "11.2.6",
         "@nestjs/terminus": "11.1.1",
+        "axios": "^1.15.0",
         "bcrypt": "6.0.0",
         "bullmq": "5.74.1",
         "dotenv": "17.3.1",

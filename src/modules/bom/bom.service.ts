@@ -11,6 +11,7 @@ import { JwtUser } from '@/types/jwt.types';
 import { TraceabilityService } from '../traceability/traceability.service';
 import { CreateMaterialDto, CreateRevisionDto, ListBomQueryDto, UpdateMaterialDto } from './bom.dto';
 import { BomMaterialPolicy, BomPolicy } from './bom.policy';
+import { OctoPartService } from './services/octopart.service';
 
 @Injectable()
 export class BomService extends BaseFilterableService {
@@ -20,6 +21,7 @@ export class BomService extends BaseFilterableService {
         private readonly policy: BomPolicy,
         private readonly materialPolicy: BomMaterialPolicy,
         private readonly traceability: TraceabilityService,
+        private readonly octopart: OctoPartService,
         filterService: FilterService,
     ) {
         super(filterService);
@@ -489,5 +491,29 @@ export class BomService extends BaseFilterableService {
             if (num1 < num2) return -1;
         }
         return 0;
+    }
+    async searchParts(q: string, limit: number = 20) {
+        // Search local items first (optional, but good for local cache)
+        const localItems = await this.db
+            .select({
+                id: Schema.items.id,
+                name: Schema.items.name,
+                mpn: Schema.items.name, // Usually use name as MPN in local
+                manufacturer: Schema.items.manufacturer,
+                description: Schema.items.description,
+                image: sql<string | null>`NULL`,
+            })
+            .from(Schema.items)
+            .where(sql`${Schema.items.name} ILIKE ${'%' + q + '%'}`)
+            .limit(limit);
+
+        // Search OctoPart
+        const octoResults = await this.octopart.search(q, limit);
+
+        // Combine and return
+        return {
+            local: localItems,
+            octopart: octoResults,
+        };
     }
 }

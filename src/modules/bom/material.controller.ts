@@ -39,4 +39,10 @@ export class MaterialController {
     async deleteMaterial(@Param('revisionId') revisionId: string, @Param('id') id: string, @CurrentUser() user: JwtUser) {
         return ok(await this.bomService.deleteMaterial(revisionId, id, user)).message('Material removed successfully');
     }
+
+    @Get('search-parts')
+    @BomDecorators.searchParts()
+    async searchParts(@Query('q') q: string) {
+        return ok(await this.bomService.searchParts(q)).message('Parts retrieved successfully');
+    }
 }
