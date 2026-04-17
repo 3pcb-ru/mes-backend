@@ -26,6 +26,8 @@ export const bomMaterialSchema = z.object({
     id: z.uuidv4(),
     bomRevisionId: z.uuidv4(),
     itemId: z.uuidv4(),
+    name: z.string().optional(), // MPN
+    manufacturer: z.string().nullable().optional(),
     designators: z.array(z.string()),
     alternatives: z.array(z.uuidv4()),
     quantity: z.coerce.number(),
@@ -175,6 +177,12 @@ export class BomMaterialResponseDto extends createStrictZodDto(bomMaterialSchema
 
     @ApiProperty({ description: 'ID of the item' })
     itemId: string;
+
+    @ApiProperty({ description: 'Item name (MPN)', required: false })
+    name?: string;
+
+    @ApiProperty({ description: 'Manufacturer name', required: false })
+    manufacturer?: string | null;
 
     @ApiProperty({ description: 'Reference designators' })
     designators: string[];

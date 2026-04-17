@@ -345,12 +345,15 @@ export class BomService extends BaseFilterableService {
         return await this.filterable(this.db, Schema.bomMaterial, {
             defaultSortColumn: 'createdAt',
         })
+            .leftJoin(Schema.items, eq(Schema.bomMaterial.itemId, Schema.items.id))
             .where(policyWhere)
             .filter(query)
             .orderByFromQuery(query, 'createdAt')
             .paginate(query)
             .selectFields({
                 ...Schema.bomMaterial,
+                name: Schema.items.name,
+                manufacturer: Schema.items.manufacturer,
             });
     }
 

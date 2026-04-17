@@ -13,6 +13,9 @@ export const productSchema = z.object({
     organizationId: z.string().uuid(),
     sku: z.string(),
     name: z.string(),
+    activeRevisionVersion: z.string().nullable().optional(),
+    status: z.string().nullable().optional(),
+    totalRevisions: z.number().default(0),
     createdAt: isoDateTime,
     updatedAt: isoDateTime,
 });
@@ -67,6 +70,15 @@ export class ProductResponseDto extends createStrictZodDto(productSchema) {
 
     @ApiProperty({ description: 'Product name' })
     name: string;
+    
+    @ApiProperty({ description: 'Active revision version', example: '1.0', required: false })
+    activeRevisionVersion?: string | null;
+
+    @ApiProperty({ description: 'Status of the active revision', example: 'active', required: false })
+    status?: string | null;
+
+    @ApiProperty({ description: 'Total number of revisions for this product', example: 5 })
+    totalRevisions: number;
 
     @ApiProperty({ description: 'Creation timestamp' })
     createdAt: string;

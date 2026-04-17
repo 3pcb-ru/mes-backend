@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 
 import { CustomLoggerService } from '@/app/services/logger/logger.service';
 import { BaseFilterableService } from '@/common/services/base-filterable.service';
@@ -32,14 +32,46 @@ export class ProductService extends BaseFilterableService {
 
     async list(query: ListProductsQueryDto, user: JwtUser) {
         const policyWhere = await this.policy.read(user, isNull(product.deletedAt));
+
+        const totalRevisionsSubquery = this.db
+            .select({
+                productId: bomRevision.productId,
+                count: sql<number>`count(*)::int`.as('count'),
+            })
+            .from(bomRevision)
+            .groupBy(bomRevision.productId)
+            .as('total_revisions');
+
+        const activeRevisionSubquery = this.db
+            .select({
+                productId: bomRevision.productId,
+                version: bomRevision.version,
+                status: bomRevision.status,
+            })
+            .from(bomRevision)
+            .where(eq(bomRevision.status, 'active'))
+            .as('active_revision');
+
         return await this.filterable(this.db, product, {
             defaultSortColumn: 'createdAt',
         })
+            .leftJoin(totalRevisionsSubquery, eq(product.id, totalRevisionsSubquery.productId))
+            .leftJoin(activeRevisionSubquery, eq(product.id, activeRevisionSubquery.productId))
             .where(policyWhere)
             .filter(query)
             .orderByFromQuery(query, 'createdAt')
             .paginate(query)
-            .select();
+            .selectFields({
+                id: product.id,
+                sku: product.sku,
+                name: product.name,
+                organizationId: product.organizationId,
+                activeRevisionVersion: activeRevisionSubquery.version,
+                status: activeRevisionSubquery.status,
+                totalRevisions: sql<number>`COALESCE(${totalRevisionsSubquery.count}, 0)::int`,
+                createdAt: product.createdAt,
+                updatedAt: product.updatedAt,
+            });
     }
 
     async create(payload: CreateProductDto, user: JwtUser) {

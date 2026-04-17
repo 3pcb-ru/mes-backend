@@ -8,6 +8,7 @@ export const items = pgTable('items', {
     organizationId: uuid('factory_id').references(() => organization.id, { onDelete: 'cascade' }),
     sku: text('sku').notNull(),
     name: text('name').notNull(),
+    manufacturer: text('manufacturer'),
     description: text('description'),
     mslLevel: text('msl_level'),
     documents: jsonb('documents'),

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, getTableColumns, sql, type AnyColumn, type SQL, type SelectedFields } from 'drizzle-orm';
+import { and, asc, desc, eq, getTableColumns, sql, type AnyColumn, type SQL, type SelectedFields, type Subquery } from 'drizzle-orm';
 import type { AnyPgColumn, AnyPgTable, PgView, PgViewWithSelection } from 'drizzle-orm/pg-core';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { ColumnFilter, FilteredQuery, Pagination } from '@/types';
@@ -11,14 +11,16 @@ type DrizzleColumn = AnyColumn;
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
 type RowOf<T> = T extends AnyPgTable ? InferSelectModel<T> : unknown;
-type PgSource = AnyPgTable | PgView | PgViewWithSelection;
+type PgJoinSource = AnyPgTable | PgView | PgViewWithSelection | Subquery;
+type PgRootSource = AnyPgTable | PgView | PgViewWithSelection;
+type PgSource = PgJoinSource; // For backwards compatibility if any other file uses it
 type JoinSpec = {
     kind: 'left' | 'inner';
-    table: PgSource;
+    table: PgJoinSource;
     on: SQL;
 };
 
-export class FilterableQueryBuilder<TSource extends PgSource> {
+export class FilterableQueryBuilder<TSource extends PgRootSource> {
     private wheres: SQL[] = [];
     private joins: JoinSpec[] = [];
     private page = DEFAULT_PAGE;
@@ -45,9 +47,17 @@ export class FilterableQueryBuilder<TSource extends PgSource> {
     }
 
     // Add LEFT/INNER join (for filtering or later selection needs)
-    join(table: PgSource, on: SQL, kind: 'left' | 'inner' = 'left') {
+    join(table: PgJoinSource, on: SQL, kind: 'left' | 'inner' = 'left') {
         this.joins.push({ kind, table, on });
         return this;
+    }
+
+    leftJoin(table: PgJoinSource, on: SQL) {
+        return this.join(table, on, 'left');
+    }
+
+    innerJoin(table: PgJoinSource, on: SQL) {
+        return this.join(table, on, 'inner');
     }
 
     where(condition?: SQL) {
