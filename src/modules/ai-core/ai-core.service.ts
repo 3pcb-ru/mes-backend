@@ -22,7 +22,7 @@ export class AiCoreService implements OnModuleInit {
             return;
         }
         this.genAI = new GoogleGenerativeAI(this.geminiApiKey);
-        this.logger.log('[AI Core] AI Core initialized successfully with API version v1.');
+        this.logger.log(`[AI Core] AI Core initialized successfully with API ${this.geminiModel}`);
     }
 
     /**
@@ -34,7 +34,7 @@ export class AiCoreService implements OnModuleInit {
             throw new Error('AI Core is not initialized. Please check GEMINI_API_KEY.');
         }
         const targetModel = modelName || this.geminiModel;
-        return this.genAI.getGenerativeModel({ model: targetModel }, { apiVersion: 'v1' });
+        return this.genAI.getGenerativeModel({ model: targetModel });
     }
 
     /**
@@ -74,7 +74,8 @@ export class AiCoreService implements OnModuleInit {
         } else if (status === 503) {
             message = 'AI service is currently experiencing high demand and is temporarily unavailable. Please try again in a moment.';
         } else if (message.includes('SECURITY_VIOLATION')) {
-            message = 'Security Protocol Breach: The AI attempted to generate forbidden technical keywords (e.g., scripts, raw logic, or internal system terms). This usually happens when requesting raw code or system-level data. Please rephrase your request to focus on UI presentation and data display.';
+            message =
+                'Security Protocol Breach: The AI attempted to generate forbidden technical keywords (e.g., scripts, raw logic, or internal system terms). This usually happens when requesting raw code or system-level data. Please rephrase your request to focus on UI presentation and data display.';
         }
 
         return { status, message, retryAfter };
