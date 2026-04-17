@@ -51,6 +51,7 @@ You are the MES Backend Orchestrator. Your primary job is to translate a non-tec
     async generateLayout(prompt: string, apiManifest: any, componentsManifest: any): Promise<any> {
         const model = this.aiCore.getModel();
 
+        this.logger.log(`[AI Vibe] Starting Layout Generation for prompt: "${prompt.substring(0, 50)}..."`);
         const fullPrompt = `
 SYSTEM PROMPT:
 ${this.getSystemPrompt()}
@@ -129,6 +130,7 @@ Generate the JSON configuration:
     async validateIntent(prompt: string): Promise<{ valid: boolean; reason?: string }> {
         const model = this.aiCore.getModel();
 
+        this.logger.log(`[AI Vibe] Validating Intent for prompt: "${prompt.substring(0, 50)}..."`);
         const moderationPrompt = `
 Task: Analyze if the Following User Request is a valid, safe, and coherent request to generate a Manufacturing/Industrial Dashboard UI.
 Request: "${prompt}"

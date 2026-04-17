@@ -20,4 +20,4 @@ export const DEFAULT_LIMIT = 10;
 export const ACTIVITY_LOG_RETENTION_DAYS = 365;
 
 // AI Configurations
-export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+export const DEFAULT_GEMINI_MODEL = 'gemini-1.5-flash';
